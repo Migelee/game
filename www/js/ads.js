@@ -161,7 +161,25 @@ const AdManager = (function () {
     return null; // s'ka dyqan (shfletues)
   }
 
-  return { init, showRewarded, showInterstitial, purchaseRemoveAds };
+  /** Rikthimi i blerjeve (kërkesë e Apple për IAP jo-konsumuese).
+   *  true = u rikthye premium, false = s'u gjet asgjë, null = s'ka dyqan. */
+  async function restorePurchases() {
+    const cap = window.Capacitor;
+    const purchases = cap && cap.Plugins && (cap.Plugins.Purchases || cap.Plugins.InAppPurchase);
+    if (purchases && purchases.restorePurchases) {
+      try {
+        const res = await purchases.restorePurchases();
+        const items = (res && (res.purchases || res.transactions)) || [];
+        return items.some((p) =>
+          (p.productIdentifier || p.productId) === "com.fjaleshqip.game.removeads");
+      } catch (e) {
+        return false;
+      }
+    }
+    return null;
+  }
+
+  return { init, showRewarded, showInterstitial, purchaseRemoveAds, restorePurchases };
 })();
 
 if (typeof module !== "undefined") {

@@ -111,6 +111,25 @@ Pastaj në Xcode:
 
 Për Android (Google Play): `npm run android:add && npm run android:sync`.
 
+### Lista përfundimtare para publikimit
+
+- [ ] Zëvendëso ID-të testuese të AdMob te `www/js/ads.js` me ID-të e tua
+      dhe shto App ID-në e AdMob në `Info.plist` / `AndroidManifest.xml`.
+- [ ] **iOS — ATT:** shto `NSUserTrackingUsageDescription` në `Info.plist`
+      dhe integro *User Messaging Platform* (UMP) të Google për pëlqimin
+      e reklamave (GDPR/ATT) — kërkohet nga Apple dhe BE-ja.
+- [ ] Regjistro produktin IAP `com.fjaleshqip.game.removeads`
+      (jo-konsumues) në App Store Connect / Play Console dhe lidhe me një
+      plugin blerjesh; butonat **Blerje** dhe **Rikthe blerjet** tashmë
+      thërrasin `AdManager.purchaseRemoveAds()` / `restorePurchases()`.
+- [ ] Lidh butonin «Vlerëso aplikacionin» me `SKStoreReviewController`
+      (p.sh. plugin `@capacitor-community/in-app-review`).
+- [ ] Politika e privatësisë (`www/privacy.html`) është gati — vendose
+      edhe në një URL publike dhe shënoje në App Store Connect.
+- [ ] Gjenero ikonat + ekranet e nisjes me `npx @capacitor/assets generate`.
+- [ ] Pamjet e ekranit për App Store: 6.7", 6.5" dhe 5.5" (iPhone),
+      12.9" (iPad) — luaj nivelet me rrjeta të bukura (p.sh. 46, 66).
+
 ## Struktura
 
 ```

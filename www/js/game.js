@@ -21,33 +21,45 @@
   });
 
   /* ---------- Gjendja e ruajtur ---------- */
+  // Mbështjellës i sigurt: localStorage mund të hedhë përjashtim
+  // (p.sh. Safari në modalitet privat) — loja s'duhet të rrëzohet kurrë.
+  const LS = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { /* vazhdo pa ruajtje */ } },
+    remove(k) { try { localStorage.removeItem(k); } catch { /* s'prish punë */ } },
+  };
+
   const store = {
-    get completed() { return parseInt(localStorage.getItem("fs_completed") || "0", 10); },
-    set completed(v) { localStorage.setItem("fs_completed", String(v)); },
-    get coins() { return parseInt(localStorage.getItem("fs_coins") || "60", 10); },
-    set coins(v) { localStorage.setItem("fs_coins", String(v)); },
-    get jar() { return parseInt(localStorage.getItem("fs_jar") || "0", 10); },
-    set jar(v) { localStorage.setItem("fs_jar", String(v)); },
-    get sound() { return localStorage.getItem("fs_sound") !== "0"; },
-    set sound(v) { localStorage.setItem("fs_sound", v ? "1" : "0"); },
-    get stars() { try { return JSON.parse(localStorage.getItem("fs_stars") || "{}"); } catch { return {}; } },
+    get completed() { return parseInt(LS.get("fs_completed", "0"), 10); },
+    set completed(v) { LS.set("fs_completed", String(v)); },
+    get coins() { return parseInt(LS.get("fs_coins", "60"), 10); },
+    set coins(v) { LS.set("fs_coins", String(v)); },
+    get jar() { return parseInt(LS.get("fs_jar", "0"), 10); },
+    set jar(v) { LS.set("fs_jar", String(v)); },
+    get sound() { return LS.get("fs_sound", "1") !== "0"; },
+    set sound(v) { LS.set("fs_sound", v ? "1" : "0"); },
+    get music() { return LS.get("fs_music", "1") !== "0"; },
+    set music(v) { LS.set("fs_music", v ? "1" : "0"); },
+    get vibration() { return LS.get("fs_vibration", "1") !== "0"; },
+    set vibration(v) { LS.set("fs_vibration", v ? "1" : "0"); },
+    get stars() { try { return JSON.parse(LS.get("fs_stars", "{}")); } catch { return {}; } },
     setStar(index, n) {
       const s = this.stars;
       s[index] = Math.max(s[index] || 0, n);
-      localStorage.setItem("fs_stars", JSON.stringify(s));
+      LS.set("fs_stars", JSON.stringify(s));
     },
-    get premium() { return localStorage.getItem("fs_premium") === "1"; },
-    set premium(v) { localStorage.setItem("fs_premium", v ? "1" : "0"); },
-    get winsSinceAd() { return parseInt(localStorage.getItem("fs_wins_ad") || "0", 10); },
-    set winsSinceAd(v) { localStorage.setItem("fs_wins_ad", String(v)); },
-    get lastDaily() { return localStorage.getItem("fs_last_daily") || ""; },
-    set lastDaily(v) { localStorage.setItem("fs_last_daily", v); },
-    get dailyStreak() { return parseInt(localStorage.getItem("fs_daily_streak") || "0", 10); },
-    set dailyStreak(v) { localStorage.setItem("fs_daily_streak", String(v)); },
-    get resume() { try { return JSON.parse(localStorage.getItem("fs_resume") || "null"); } catch { return null; } },
+    get premium() { return LS.get("fs_premium", "0") === "1"; },
+    set premium(v) { LS.set("fs_premium", v ? "1" : "0"); },
+    get winsSinceAd() { return parseInt(LS.get("fs_wins_ad", "0"), 10); },
+    set winsSinceAd(v) { LS.set("fs_wins_ad", String(v)); },
+    get lastDaily() { return LS.get("fs_last_daily", ""); },
+    set lastDaily(v) { LS.set("fs_last_daily", v); },
+    get dailyStreak() { return parseInt(LS.get("fs_daily_streak", "0"), 10); },
+    set dailyStreak(v) { LS.set("fs_daily_streak", String(v)); },
+    get resume() { try { return JSON.parse(LS.get("fs_resume", "null")); } catch { return null; } },
     set resume(v) {
-      if (v) localStorage.setItem("fs_resume", JSON.stringify(v));
-      else localStorage.removeItem("fs_resume");
+      if (v) LS.set("fs_resume", JSON.stringify(v));
+      else LS.remove("fs_resume");
     },
   };
 
@@ -76,14 +88,13 @@
   }
 
   function vibrate(pattern) {
-    if (navigator.vibrate) navigator.vibrate(pattern);
+    if (store.vibration && navigator.vibrate) navigator.vibrate(pattern);
   }
 
   /* ---------- Tingujt (WebAudio, pa asnjë skedar) ---------- */
   const Sound = {
     ctx: null,
-    ensure() {
-      if (!store.sound) return null;
+    ensureCtx() {
       if (!this.ctx) {
         const AC = window.AudioContext || window.webkitAudioContext;
         if (!AC) return null;
@@ -91,6 +102,9 @@
       }
       if (this.ctx.state === "suspended") this.ctx.resume();
       return this.ctx;
+    },
+    ensure() {
+      return store.sound ? this.ensureCtx() : null;
     },
     tone(freq, dur, type = "sine", gain = 0.14, delay = 0) {
       const ctx = this.ensure();
@@ -119,6 +133,49 @@
       vibrate([40, 60, 40, 60, 120]);
     },
   };
+
+  /* ---------- Muzika e sfondit (arpezh i qetë pentatonik) ---------- */
+  const Music = {
+    timer: null,
+    // Mi minor pentatonik në dy oktava — tingëllon i qetë e ballkanik
+    notes: [164.81, 196.0, 220.0, 246.94, 293.66, 329.63, 392.0, 440.0],
+    pluck(freq) {
+      const ctx = Sound.ensureCtx();
+      if (!ctx) return;
+      const t = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 850;
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.045, t);
+      g.gain.exponentialRampToValueAtTime(0.0008, t + 1.9);
+      osc.connect(lp).connect(g).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 2);
+    },
+    start() {
+      if (this.timer || !store.music) return;
+      this.timer = setInterval(() => {
+        if (!store.music) return;
+        if (Math.random() < 0.3) return; // pushime të rastit — frymëmarrje
+        this.pluck(this.notes[Math.floor(Math.random() * this.notes.length)]);
+      }, 1150);
+    },
+    stop() {
+      clearInterval(this.timer);
+      this.timer = null;
+    },
+  };
+
+  // WebAudio zhbllokohet vetëm pas gjestit të parë të përdoruesit
+  document.addEventListener("pointerdown", function unlock() {
+    Sound.ensureCtx();
+    Music.start();
+    document.removeEventListener("pointerdown", unlock);
+  });
 
   /* ---------- Monedhat, kavanozi, seria ---------- */
   function bump(el) {
@@ -644,9 +701,20 @@
   }
 
   /* Shkronjat fluturojnë nga rrota drejt qelizave të rrjetës. */
+  function showPraise(text) {
+    const el = $("praise");
+    el.textContent = text;
+    el.classList.remove("go");
+    void el.offsetWidth;
+    el.classList.add("go");
+  }
+
   function revealWordAnimated(word, usedNodes) {
     current.foundWords.add(word);
     Sound.word();
+    if (word.length === current.level.letters.length) showPraise("LEGJENDARE!");
+    else if (word.length >= 6) showPraise("MREKULLI!");
+    else if (word.length === 5) showPraise("SHKËLQYESHËM!");
     const placement = current.grid.placements.find((p) => p.word === word);
     const keys = wordCells(placement);
 
@@ -781,6 +849,20 @@
     const starEls = $("win-stars").querySelectorAll("i");
     starEls.forEach((el, i) => el.classList.toggle("lit", i < stars));
 
+    // përmbledhja e fjalëve — prek një fjalë për kuptimin e saj
+    const wordsEl = $("win-words");
+    wordsEl.innerHTML = "";
+    current.grid.placements
+      .map((p) => p.word)
+      .sort((a, b) => b.length - a.length)
+      .forEach((w) => {
+        const chip = document.createElement("button");
+        chip.className = "win-word-chip";
+        chip.textContent = w;
+        chip.addEventListener("click", () => showGloss(w));
+        wordsEl.appendChild(chip);
+      });
+
     const bonusCount = current.bonusFound.size;
     const isLast = current.index === LEVELS.length - 1;
     $("win-text").textContent =
@@ -854,12 +936,49 @@
     $("overlay-daily").classList.add("show");
   }
 
-  /* ---------- Zëri ---------- */
-  function renderSoundBtn() {
-    const btn = $("btn-sound");
-    btn.textContent = store.sound ? "🔊" : "🔇";
-    btn.classList.toggle("muted", !store.sound);
+  /* ---------- Cilësimet ---------- */
+  const VERSION = "1.2.0";
+
+  function openSettings() {
+    $("tgl-sound").checked = store.sound;
+    $("tgl-music").checked = store.music;
+    $("tgl-vibration").checked = store.vibration;
+    $("version-note").textContent = `Fjalë Shqip v${VERSION} · Fjalët sipas Fjalorit të Gjuhës Shqipe`;
+    $("overlay-settings").classList.add("show");
   }
+
+  async function doRestorePurchases() {
+    const r = await AdManager.restorePurchases();
+    if (r === true) {
+      store.premium = true;
+      toast("✓ Blerjet u rikthyen — reklamat u hoqën!");
+    } else if (r === false) {
+      toast("S'u gjet asnjë blerje e mëparshme");
+    } else {
+      toast("Rikthimi funksionon vetëm në aplikacionin e telefonit 📱", 2200);
+    }
+  }
+
+  $("tgl-sound").addEventListener("change", (e) => {
+    store.sound = e.target.checked;
+    if (store.sound) Sound.coin();
+  });
+  $("tgl-music").addEventListener("change", (e) => {
+    store.music = e.target.checked;
+    if (store.music) Music.start(); else Music.stop();
+  });
+  $("tgl-vibration").addEventListener("change", (e) => {
+    store.vibration = e.target.checked;
+    vibrate(40);
+  });
+  $("btn-settings").addEventListener("click", openSettings);
+  $("btn-settings-home").addEventListener("click", openSettings);
+  $("btn-settings-close").addEventListener("click", () => $("overlay-settings").classList.remove("show"));
+  $("btn-restore").addEventListener("click", doRestorePurchases);
+  $("btn-restore-shop").addEventListener("click", doRestorePurchases);
+  $("btn-privacy").addEventListener("click", () => window.open("privacy.html", "_blank"));
+  $("btn-rate").addEventListener("click", () =>
+    toast("Faleminderit! ⭐ Vlerësimi hapet në App Store / Google Play", 2200));
 
   /* ---------- Lidhjet e butonave ---------- */
   $("btn-play").addEventListener("click", () => startLevel(Math.min(store.completed, LEVELS.length - 1)));
@@ -870,11 +989,6 @@
   $("btn-hint").addEventListener("click", useHint);
   $("btn-bomb").addEventListener("click", useBomb);
   $("btn-target").addEventListener("click", enterTargetMode);
-  $("btn-sound").addEventListener("click", () => {
-    store.sound = !store.sound;
-    renderSoundBtn();
-    if (store.sound) Sound.coin();
-  });
   $("btn-next").addEventListener("click", () => {
     $("overlay-win").classList.remove("show");
     afterWinAd(() => startLevel(current.index + 1));
@@ -900,11 +1014,21 @@
   });
 
   /* ---------- Nisja ---------- */
+  // pa menu konteksti me prekje të gjatë — si aplikacion i vërtetë
+  document.addEventListener("contextmenu", (e) => e.preventDefault());
+
   updateCoins();
   updateJar();
-  renderSoundBtn();
   AdManager.init();
-  checkDailyReward();
+
+  // ekrani i nisjes zhduket kur gjithçka është gati
+  setTimeout(() => {
+    const splash = $("splash");
+    splash.classList.add("hide");
+    setTimeout(() => splash.remove(), 600);
+    checkDailyReward();
+  }, 1100);
+
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }

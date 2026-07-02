@@ -8,16 +8,27 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Fjalë Shqip — loja e fjalëkryqit me fjalë shqipe. Lidh shkronjat dhe zbulo fjalët!">
   <title>Fjalë Shqip — Fjalëkryqi Shqiptar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon.svg">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <!-- Ekrani i nisjes -->
+  <div id="splash" class="splash" aria-hidden="true">
+    <img src="icons/icon.svg" alt="" width="110" height="110">
+    <div class="splash-title">Fjalë <span>Shqip</span></div>
+    <div class="splash-bar"><b></b></div>
+  </div>
+
   <div id="stars" class="stars" aria-hidden="true"></div>
 
   <!-- Ekrani kryesor -->
   <div id="screen-home" class="screen active">
+    <button class="icon-btn home-gear" id="btn-settings-home" aria-label="Cilësimet">⚙️</button>
     <div class="home-inner">
       <div class="eagle-badge" aria-hidden="true">
         <svg viewBox="0 0 120 120" width="110" height="110">
@@ -69,7 +80,7 @@
         <div id="level-city" class="level-city"></div>
         <div id="level-num" class="level-num"></div>
       </div>
-      <button class="icon-btn small" id="btn-sound" aria-label="Zëri">🔊</button>
+      <button class="icon-btn small" id="btn-settings" aria-label="Cilësimet">⚙️</button>
       <div class="jar-chip" id="jar-chip" title="Kavanozi i yjeve: mblidh 10 yje bonus për +40 monedha">⭐ <span id="jar-count">0</span>/10</div>
       <button class="coin-chip shop-open">🪙 <span id="coins-game">0</span> ＋</button>
     </header>
@@ -79,7 +90,7 @@
     </div>
 
     <div id="tutorial" class="tutorial">👆 Lidh shkronjat në rrotë për të formuar një fjalë</div>
-    <div id="toast" class="toast"></div>
+    <div id="praise" class="praise"></div>
     <div id="streak-badge" class="streak-badge">🔥 <span id="streak-count">0</span></div>
 
     <div class="bottom-area">
@@ -106,6 +117,7 @@
       <div class="win-stars" id="win-stars"><i>★</i><i>★</i><i>★</i></div>
       <h2>Të lumtë!</h2>
       <p id="win-text"></p>
+      <div id="win-words" class="win-words"></div>
       <button id="btn-next" class="btn btn-primary">Niveli tjetër</button>
       <button id="btn-win-menu" class="btn btn-ghost">Qytetet</button>
     </div>
@@ -136,6 +148,7 @@
         <span class="shop-price">2.99&nbsp;€</span>
       </button>
       <p id="premium-note" class="source-note" style="display:none">✓ Reklamat janë hequr — faleminderit!</p>
+      <button id="btn-restore-shop" class="link-btn">Rikthe blerjet</button>
       <button id="btn-shop-close" class="btn btn-ghost">Mbylle</button>
     </div>
   </div>
@@ -161,6 +174,37 @@
     </div>
   </div>
 
+  <!-- Cilësimet -->
+  <div id="overlay-settings" class="overlay">
+    <div class="overlay-card settings-card">
+      <h2>⚙️ Cilësimet</h2>
+      <label class="set-row">
+        <span class="set-label">🔊 Efektet zanore</span>
+        <input type="checkbox" id="tgl-sound"><i class="switch"></i>
+      </label>
+      <label class="set-row">
+        <span class="set-label">🎵 Muzika</span>
+        <input type="checkbox" id="tgl-music"><i class="switch"></i>
+      </label>
+      <label class="set-row">
+        <span class="set-label">📳 Dridhjet</span>
+        <input type="checkbox" id="tgl-vibration"><i class="switch"></i>
+      </label>
+      <button class="set-row set-btn" id="btn-restore">
+        <span class="set-label">🔄 Rikthe blerjet</span><span class="chev">›</span>
+      </button>
+      <button class="set-row set-btn" id="btn-rate">
+        <span class="set-label">⭐ Vlerëso aplikacionin</span><span class="chev">›</span>
+      </button>
+      <button class="set-row set-btn" id="btn-privacy">
+        <span class="set-label">🔒 Politika e privatësisë</span><span class="chev">›</span>
+      </button>
+      <p class="source-note" id="version-note"></p>
+      <button id="btn-settings-close" class="btn btn-ghost">Mbylle</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
   <div id="fx-layer" class="fx-layer" aria-hidden="true"></div>
 
   <script src="js/levels.js"></script>
