@@ -1,10 +1,11 @@
 /* Service worker — punon edhe pa internet (cache-first). */
-const CACHE = "fjale-shqip-v1";
+const CACHE = "fjale-shqip-v2";
 const ASSETS = [
   "index.html",
   "css/style.css",
   "js/levels.js",
   "js/crossword.js",
+  "js/ads.js",
   "js/game.js",
   "icons/icon.svg",
   "manifest.webmanifest",

@@ -19,18 +19,54 @@
 
 ## Nivelet — nga më i lehti te më i vështiri
 
-48 nivele të ndara në 8 qytete/vende historike shqiptare, me vështirësi në rritje:
+66 nivele të ndara në 11 qytete/vende historike shqiptare, me vështirësi në rritje:
 
 | Paketa | Vështirësia | Shkronja |
 |---|---|---|
 | 🏛️ Butrinti | Fillestar | 3–4 |
 | 🏰 Shkodra | I lehtë | 4 |
 | ⚔️ Kruja | Nxënës | 4 |
+| 🏖️ Saranda | Zbulues | 4–5 |
+| 🏔️ Tropoja | Malësor | 4–5 |
 | 🏘️ Berati | Mesatar | 4–5 |
 | ⚓ Durrësi | I përparuar | 5 |
 | 🌊 Vlora | I vështirë | 5–6 |
 | 🎻 Korça | Ekspert | 5–6 |
 | 🪨 Gjirokastra | Mjeshtër | 5–6 (deri në 10 fjalë për nivel) |
+| 🏙️ Tirana | Legjendar | 5–7, mbyllet me ATDHEU (11 fjalë) |
+
+## Monetizimi — falas me reklama (dhe "Hiq reklamat")
+
+Loja përdor modelin **free-to-play me reklama**, jo çmim blerjeje — për
+lojërat e fjalëve ky model sjell shumëfish më tepër shkarkime dhe të
+ardhura se një aplikacion me pagesë, sidomos për një treg gjuhësor të
+vogël. Tri burime:
+
+1. **Reklama me shpërblim** 📺 — lojtari zgjedh vetë t'i shohë në
+   Dyqan (prek çipin 🪙 ＋) dhe fiton +30 monedha.
+2. **Reklama të plota** — pas çdo 3 nivelesh të fituara, kurrë para
+   nivelit 4 dhe kurrë për lojtarët premium.
+3. **"Hiq reklamat"** 🚫 — blerje një herë (IAP) që i fik të gjitha.
+
+Gjithçka kalon përmes `www/js/ads.js` (`AdManager`):
+
+- **Në shfletues / gjatë zhvillimit** shfaqet një reklamë e simuluar me
+  numërim mbrapsht, kështu që gjithë rrjedha testohet pa SDK.
+- **Në telefon (Capacitor)** përdoret **Google AdMob** përmes
+  [`@capacitor-community/admob`](https://github.com/capacitor-community/admob).
+  ID-të në `CONFIG` janë ID-të **testuese** zyrtare të Google —
+  zëvendësoji me ID-të e aplikacionit tënd nga [admob.google.com](https://admob.google.com)
+  para publikimit, dhe shto `GADApplicationIdentifier` në `Info.plist` (iOS)
+  a `com.google.android.gms.ads.APPLICATION_ID` në `AndroidManifest.xml`.
+- Për blerjen "Hiq reklamat" regjistro produktin
+  `com.fjaleshqip.game.removeads` në App Store Connect / Play Console
+  dhe lidhe me një plugin blerjesh (p.sh. RevenueCat ose
+  `cordova-plugin-purchase`); `AdManager.purchaseRemoveAds()` e thërret
+  atë kur ekziston.
+
+Përfitime të tjera ditore: **shpërblimi ditor** 🎁 me seri (10–30 🪙)
+i kthen lojtarët çdo ditë, dhe niveli i lënë përgjysmë **ruhet e
+vazhdohet** aty ku mbeti.
 
 ## Burimi i fjalëve
 
@@ -81,8 +117,9 @@ Për Android (Google Play): `npm run android:add && npm run android:sync`.
 www/                  aplikacioni web (webDir i Capacitor)
   index.html          UI kryesore (3 ekrane + dritaret)
   css/style.css       stilet me ngjyrat e flamurit shqiptar
-  js/levels.js        30 nivelet, fjalët bonus, shpjegimet nga fjalori
+  js/levels.js        66 nivelet, fjalët bonus, shpjegimet nga fjalori
   js/crossword.js     gjeneratori determinist i rrjetës së fjalëkryqit
+  js/ads.js           AdManager: reklamat (AdMob/simulim) dhe IAP
   js/game.js          logjika e lojës (rrota, rrjeta, monedhat, ndihmat)
   sw.js               service worker (offline)
 tools/validate.js     verifikon nivelet dhe gjenerimin e rrjetave

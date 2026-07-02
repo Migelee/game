@@ -186,7 +186,7 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.level-num { font-size: 16px; font-weight: 800; }
+.level-num { font-size: 14px; font-weight: 800; white-space: nowrap; }
 
 /* ---------- Lista e paketave ---------- */
 .packs-list {
@@ -575,6 +575,58 @@ html, body {
   from { transform: scale(0); }
   to { transform: scale(1); }
 }
+
+/* ---------- Dyqani dhe reklamat ---------- */
+.coin-chip { cursor: pointer; font-family: inherit; }
+.shop-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: 1.5px solid rgba(255,255,255,0.18);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.07);
+  color: var(--paper);
+  font-family: inherit;
+  padding: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.1s ease, background 0.15s;
+}
+.shop-item:active { transform: scale(0.97); background: rgba(255,255,255,0.12); }
+.shop-icon { font-size: 28px; }
+.shop-label { flex: 1; font-size: 15px; font-weight: 700; display: flex; flex-direction: column; gap: 2px; }
+.shop-label small { font-size: 11px; font-weight: 500; opacity: 0.65; }
+.shop-price {
+  background: linear-gradient(180deg, var(--gold-light), var(--gold));
+  color: #3b2405;
+  font-weight: 800;
+  font-size: 13px;
+  border-radius: 999px;
+  padding: 6px 11px;
+  white-space: nowrap;
+}
+.win-eagle { font-size: 44px; }
+.ad-overlay { background: rgba(0,0,0,0.88); }
+.ad-card { border-color: rgba(255,255,255,0.2); }
+.ad-tag {
+  align-self: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 999px;
+  padding: 3px 10px;
+  opacity: 0.7;
+}
+.ad-count {
+  min-height: 30px;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--gold-light);
+}
+.btn:disabled { opacity: 0.45; cursor: default; }
 
 @media (max-height: 680px) {
   .wheel { width: min(54vw, 205px); height: min(54vw, 205px); }

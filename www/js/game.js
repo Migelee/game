@@ -36,6 +36,19 @@
       s[index] = Math.max(s[index] || 0, n);
       localStorage.setItem("fs_stars", JSON.stringify(s));
     },
+    get premium() { return localStorage.getItem("fs_premium") === "1"; },
+    set premium(v) { localStorage.setItem("fs_premium", v ? "1" : "0"); },
+    get winsSinceAd() { return parseInt(localStorage.getItem("fs_wins_ad") || "0", 10); },
+    set winsSinceAd(v) { localStorage.setItem("fs_wins_ad", String(v)); },
+    get lastDaily() { return localStorage.getItem("fs_last_daily") || ""; },
+    set lastDaily(v) { localStorage.setItem("fs_last_daily", v); },
+    get dailyStreak() { return parseInt(localStorage.getItem("fs_daily_streak") || "0", 10); },
+    set dailyStreak(v) { localStorage.setItem("fs_daily_streak", String(v)); },
+    get resume() { try { return JSON.parse(localStorage.getItem("fs_resume") || "null"); } catch { return null; } },
+    set resume(v) {
+      if (v) localStorage.setItem("fs_resume", JSON.stringify(v));
+      else localStorage.removeItem("fs_resume");
+    },
   };
 
   const COST_HINT = 25;
@@ -46,6 +59,9 @@
   const STREAK_REWARD = 3;   // monedha shtesë për çdo gjetje kur seria >= 3
   const JAR_SIZE = 10;
   const JAR_REWARD = 40;
+  const AD_REWARD = 30;       // monedha për një reklamë me shpërblim
+  const AD_EVERY_WINS = 3;    // reklamë e plotë çdo 3 nivele të fituara
+  const AD_MIN_LEVEL = 4;     // asnjë reklamë para nivelit 4
 
   /* ---------- Gjendja e nivelit aktual ---------- */
   let current = null;
@@ -303,7 +319,6 @@
     setStreak(0);
 
     $("level-city").textContent = level.pack.emoji + " " + level.pack.name;
-    $("level-num").textContent = "Niveli " + (index + 1);
     screens.game.style.setProperty("--accent", level.pack.color);
 
     // udhëzuesi vetëm në nivelin e parë të lojës
@@ -313,8 +328,43 @@
     showScreen("game");
     renderGrid();
     renderWheel();
+    restoreProgress();
+    updateWordCount();
     updateCoins();
     updateJar();
+  }
+
+  function updateWordCount() {
+    $("level-num").textContent =
+      `Niveli ${current.index + 1} · ${current.foundWords.size}/${current.grid.placements.length}`;
+  }
+
+  /* ---------- Vazhdimi i nivelit të lënë përgjysmë ---------- */
+  function saveProgress() {
+    if (!current || current.won) return;
+    if (current.foundWords.size === 0 && current.revealed.size === 0) return;
+    store.resume = {
+      index: current.index,
+      revealed: [...current.revealed],
+      found: [...current.foundWords],
+      bonus: [...current.bonusFound],
+      toolUses: current.toolUses,
+      wrongGuesses: current.wrongGuesses,
+    };
+  }
+
+  function restoreProgress() {
+    const saved = store.resume;
+    if (!saved || saved.index !== current.index) return;
+    saved.found.forEach((w) => current.foundWords.add(w));
+    saved.bonus.forEach((w) => current.bonusFound.add(w));
+    saved.revealed.forEach((k) => {
+      current.revealed.add(k);
+      const cell = current.cellEls.get(k);
+      if (cell) cell.classList.add("revealed");
+    });
+    current.toolUses = saved.toolUses || 0;
+    current.wrongGuesses = saved.wrongGuesses || 0;
   }
 
   function renderGrid() {
@@ -551,6 +601,7 @@
       Sound.bonus();
       addCoins(BONUS_REWARD, wheelEl);
       addJarStar(wheelEl);
+      saveProgress();
       toast(`✨ Fjalë bonus: ${word} (+${BONUS_REWARD} 🪙)`);
       return;
     }
@@ -630,6 +681,8 @@
         current.foundWords.add(p.word);
       }
     }
+    updateWordCount();
+    saveProgress();
   }
 
   /* ---------- Ndihmat ---------- */
@@ -712,6 +765,8 @@
     if (!all) return;
     current.won = true;
     exitTargetMode();
+    store.resume = null;
+    store.winsSinceAd = store.winsSinceAd + 1;
 
     const stars = computeStars();
     store.setStar(current.index, stars);
@@ -734,6 +789,69 @@
       (isLast ? " — Përfundove gjithë lojën! 🇦🇱" : "");
     $("btn-next").style.display = isLast ? "none" : "";
     setTimeout(() => $("overlay-win").classList.add("show"), 650);
+  }
+
+  /* ---------- Reklamat dhe dyqani ---------- */
+
+  /* Reklamë e plotë pas çdo AD_EVERY_WINS nivelesh, kurrë para nivelit
+   * AD_MIN_LEVEL dhe kurrë për lojtarët premium. */
+  function afterWinAd(next) {
+    if (store.premium || store.completed < AD_MIN_LEVEL || store.winsSinceAd < AD_EVERY_WINS) {
+      next();
+      return;
+    }
+    store.winsSinceAd = 0;
+    AdManager.showInterstitial(next);
+  }
+
+  function openShop() {
+    const isPremium = store.premium;
+    $("btn-remove-ads").style.display = isPremium ? "none" : "";
+    $("premium-note").style.display = isPremium ? "" : "none";
+    $("overlay-shop").classList.add("show");
+  }
+
+  $("btn-shop-close").addEventListener("click", () => $("overlay-shop").classList.remove("show"));
+  document.querySelectorAll(".shop-open").forEach((el) => el.addEventListener("click", openShop));
+
+  $("btn-watch-ad").addEventListener("click", () => {
+    AdManager.showRewarded(
+      () => {
+        addCoins(AD_REWARD, $("btn-watch-ad"));
+        toast(`📺 +${AD_REWARD} 🪙 — faleminderit!`);
+      },
+      () => toast("Reklama s'është gati — provo më vonë")
+    );
+  });
+
+  $("btn-remove-ads").addEventListener("click", async () => {
+    const result = await AdManager.purchaseRemoveAds();
+    if (result === true) {
+      store.premium = true;
+      openShop();
+      toast("✓ Reklamat u hoqën përgjithmonë!");
+    } else if (result === false) {
+      toast("Blerja nuk u krye");
+    } else {
+      toast("Blerjet funksionojnë vetëm në aplikacionin e telefonit 📱", 2400);
+    }
+  });
+
+  /* ---------- Shpërblimi ditor ---------- */
+  function checkDailyReward() {
+    const today = new Date().toISOString().slice(0, 10);
+    if (store.lastDaily === today) return;
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    store.dailyStreak = store.lastDaily === yesterday ? store.dailyStreak + 1 : 1;
+    store.lastDaily = today;
+    const reward = 10 + 5 * Math.min(store.dailyStreak - 1, 4);
+    $("daily-text").textContent =
+      `Dita ${store.dailyStreak} radhazi 🔥 — ${reward} monedha dhuratë për ty!`;
+    $("btn-daily-claim").onclick = () => {
+      $("overlay-daily").classList.remove("show");
+      addCoins(reward, $("btn-daily-claim"));
+    };
+    $("overlay-daily").classList.add("show");
   }
 
   /* ---------- Zëri ---------- */
@@ -759,12 +877,14 @@
   });
   $("btn-next").addEventListener("click", () => {
     $("overlay-win").classList.remove("show");
-    startLevel(current.index + 1);
+    afterWinAd(() => startLevel(current.index + 1));
   });
   $("btn-win-menu").addEventListener("click", () => {
     $("overlay-win").classList.remove("show");
-    renderPacks();
-    showScreen("packs");
+    afterWinAd(() => {
+      renderPacks();
+      showScreen("packs");
+    });
   });
   $("btn-gloss-close").addEventListener("click", () => $("overlay-gloss").classList.remove("show"));
 
@@ -783,6 +903,8 @@
   updateCoins();
   updateJar();
   renderSoundBtn();
+  AdManager.init();
+  checkDailyReward();
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
