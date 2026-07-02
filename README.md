@@ -19,7 +19,36 @@
 
 ## Nivelet — nga më i lehti te më i vështiri
 
-66 nivele të ndara në 11 qytete/vende historike shqiptare, me vështirësi në rritje:
+**2 389 nivele gjithsej**: 66 nivele "historie" të punuara me dorë në 11
+qytete, plus **2 323 nivele të gjeneruara** në 194 paketa me emra vendesh
+shqiptare (Valbona, Thethi, Vjosa, Ksamili…), të renditura nga më të
+lehtat te më të vështirat.
+
+### Vegla e gjenerimit të niveleve
+
+```bash
+node tools/generate-levels.js   # prodhon www/js/levels-gen.js
+node tools/validate.js          # verifikon TË GJITHA nivelet
+```
+
+Si punon gjeneratori (`tools/generate-levels.js`):
+
+1. Merr çdo fjalë 4–7 shkronjash nga **leksiku** (`tools/lexicon.js`,
+   ~400 fjalë të verifikuara sipas FGJSSH) si rrotë shkronjash, dhe
+   krijon edhe rrota të zgjeruara me 1–2 shkronja shtesë.
+2. Gjen të gjitha fjalët e leksikut që formohen nga shkronjat e rrotës.
+3. Zgjedh disa variante fjalësh objektiv për rrotë dhe **verifikon me
+   gjeneratorin real të fjalëkryqit** se ato vendosen në rrjetë të
+   lidhur; fara (seed) që funksionon ruhet në të dhëna dhe përdoret
+   njësoj nga loja.
+4. Rendit nivelet sipas vështirësisë dhe i ndan në paketa me nga 12.
+
+**Për të shtuar më shumë nivele: shto fjalë të reja te
+`tools/lexicon.js`** (vetëm fjalë të verifikuara në fjalor!) dhe
+rigjenero — çdo fjalë e re shumëfishon kombinacionet. Çdo fjalë e
+leksikut njihet edhe si **fjalë bonus** gjatë lojës.
+
+Paketat e historisë (me shpjegime fjalori për çdo fjalë):
 
 | Paketa | Vështirësia | Shkronja |
 |---|---|---|
@@ -136,11 +165,14 @@ Për Android (Google Play): `npm run android:add && npm run android:sync`.
 www/                  aplikacioni web (webDir i Capacitor)
   index.html          UI kryesore (3 ekrane + dritaret)
   css/style.css       stilet me ngjyrat e flamurit shqiptar
-  js/levels.js        66 nivelet, fjalët bonus, shpjegimet nga fjalori
+  js/levels.js        66 nivelet e historisë, fjalët bonus, shpjegimet
+  js/levels-gen.js    2 323 nivelet e gjeneruara (mos e edito me dorë)
   js/crossword.js     gjeneratori determinist i rrjetës së fjalëkryqit
   js/ads.js           AdManager: reklamat (AdMob/simulim) dhe IAP
   js/game.js          logjika e lojës (rrota, rrjeta, monedhat, ndihmat)
   sw.js               service worker (offline)
-tools/validate.js     verifikon nivelet dhe gjenerimin e rrjetave
+tools/lexicon.js      leksiku shqip (~400 fjalë të verifikuara, FGJSSH)
+tools/generate-levels.js  vegla që prodhon mijëra nivele nga leksiku
+tools/validate.js     verifikon TË GJITHA nivelet dhe rrjetat
 capacitor.config.json konfigurimi për iOS/Android
 ```

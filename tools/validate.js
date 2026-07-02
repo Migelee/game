@@ -48,8 +48,47 @@ for (const pack of PACKS) {
   }
 }
 
+/* ---------- nivelet e gjeneruara ---------- */
+let genNo = 0;
+let genErrors = 0;
+try {
+  const { GENERATED_PACKS, LEXICON_WORDS } = require("../www/js/levels-gen.js");
+  const LEX = new Set(LEXICON_WORDS);
+  for (const pack of GENERATED_PACKS) {
+    for (const level of pack.levels) {
+      genNo++;
+      const seen = new Set();
+      for (const w of level.words) {
+        if (!isSubset(w, level.letters)) {
+          console.error(`Gjeneruar ${genNo} (${level.letters}): "${w}" nuk formohet`);
+          genErrors++;
+        }
+        if (!LEX.has(w)) {
+          console.error(`Gjeneruar ${genNo} (${level.letters}): "${w}" jashtë leksikut`);
+          genErrors++;
+        }
+        if (seen.has(w)) {
+          console.error(`Gjeneruar ${genNo} (${level.letters}): "${w}" e përsëritur`);
+          genErrors++;
+        }
+        seen.add(w);
+      }
+      try {
+        generateGrid(level.words, level.seed);
+      } catch (e) {
+        console.error(`Gjeneruar ${genNo} (${level.letters}): rrjeta DËSHTOI me farën ${level.seed}`);
+        genErrors++;
+      }
+    }
+  }
+  console.log(`Nivelet e gjeneruara: ${genNo} të verifikuara, ${genErrors} gabime.`);
+  errors += genErrors;
+} catch (e) {
+  console.log("(S'ka nivele të gjeneruara — ekzekuto tools/generate-levels.js)");
+}
+
 if (errors > 0) {
   console.error(`\n${errors} gabime!`);
   process.exit(1);
 }
-console.log(`\nTë gjitha ${levelNo} nivelet janë në rregull.`);
+console.log(`\nTë gjitha ${levelNo + genNo} nivelet janë në rregull.`);

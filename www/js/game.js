@@ -13,10 +13,16 @@
   "use strict";
 
   /* ---------- Nivelet e sheshuara ---------- */
+  // paketat e punuara me dorë + mijëra paketa të gjeneruara nga leksiku
+  const ALL_PACKS = PACKS.concat(typeof GENERATED_PACKS !== "undefined" ? GENERATED_PACKS : []);
+  const EXTRA_LEXICON = new Set(typeof LEXICON_WORDS !== "undefined" ? LEXICON_WORDS : []);
   const LEVELS = [];
-  PACKS.forEach((pack, pi) => {
+  ALL_PACKS.forEach((pack, pi) => {
     pack.levels.forEach((lv, li) => {
-      LEVELS.push({ pack, packIndex: pi, indexInPack: li, letters: lv.letters, words: lv.words });
+      LEVELS.push({
+        pack, packIndex: pi, indexInPack: li,
+        letters: lv.letters, words: lv.words, seed: lv.seed,
+      });
     });
   });
 
@@ -359,7 +365,7 @@
     list.innerHTML = "";
     const stars = store.stars;
     let globalIndex = 0;
-    PACKS.forEach((pack) => {
+    ALL_PACKS.forEach((pack) => {
       const card = document.createElement("div");
       card.className = "pack-card";
       card.style.setProperty("--pack-color", pack.color);
@@ -403,7 +409,8 @@
   function startLevel(index) {
     if (index >= LEVELS.length) index = LEVELS.length - 1;
     const level = LEVELS[index];
-    const grid = generateGrid(level.words, (index + 1) * 7919);
+    // nivelet e gjeneruara mbajnë farën e tyre të verifikuar nga vegla
+    const grid = generateGrid(level.words, level.seed || (index + 1) * 7919);
 
     current = {
       index,
@@ -719,7 +726,7 @@
       return;
     }
 
-    if (BONUS_WORDS.has(word) && canFormFromWheel(word)) {
+    if ((BONUS_WORDS.has(word) || EXTRA_LEXICON.has(word)) && canFormFromWheel(word)) {
       if (current.bonusFound.has(word)) {
         toast("Bonus i marrë tashmë");
         return;

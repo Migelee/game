@@ -1,11 +1,12 @@
 /* Service worker — punon edhe pa internet (cache-first),
  * me ruajtje dinamike të fonteve të Google. */
-const CACHE = "fjale-shqip-v3";
+const CACHE = "fjale-shqip-v4";
 const ASSETS = [
   "index.html",
   "privacy.html",
   "css/style.css",
   "js/levels.js",
+  "js/levels-gen.js",
   "js/crossword.js",
   "js/ads.js",
   "js/game.js",
