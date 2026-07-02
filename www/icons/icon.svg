@@ -2,16 +2,21 @@
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#c8102e"/>
-      <stop offset="1" stop-color="#7c0d18"/>
+      <stop offset="1" stop-color="#6d0b14"/>
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="110" fill="url(#bg)"/>
-  <!-- shqiponja e stilizuar -->
-  <path d="M256 96 L232 150 L164 112 L204 190 L112 180 L192 238 L136 288 L212 268 L202 348 L248 282 L256 372 L264 282 L310 348 L300 268 L376 288 L320 238 L400 180 L308 190 L348 112 L280 150 Z"
-        fill="#1a1a1d"/>
+  <!-- shqiponja dykrenare e stilizuar -->
+  <g fill="#14141a" transform="translate(46 20) scale(3.5)">
+    <path d="M60 30 L57 44 L63 44 Z"/>
+    <path d="M46 33 q-8 -6 -14 -4 q5 1 7 6 q-6 -1 -9 2 q5 0 8 4 L52 48 Z"/>
+    <path d="M74 33 q8 -6 14 -4 q-5 1 -7 6 q6 -1 9 2 q-5 0 -8 4 L68 48 Z"/>
+    <path d="M60 42 L38 50 L18 44 q6 8 16 12 L20 58 q8 5 18 4 L26 72 q9 1 16 -4 l-4 14 q7 -3 11 -9 l2 16 h18 l2 -16 q4 6 11 9 l-4 -14 q7 5 16 4 L82 62 q10 1 18 -4 l-14 -2 q10 -4 16 -12 L82 50 Z"/>
+    <path d="M52 92 l8 6 l8 -6 l-4 10 h-8 Z"/>
+  </g>
   <!-- pllakëza shkronje -->
-  <rect x="146" y="356" width="100" height="100" rx="20" fill="#fdf6ec"/>
-  <text x="196" y="432" font-family="Arial, sans-serif" font-size="64" font-weight="800" fill="#1a1a1d" text-anchor="middle">F</text>
-  <rect x="266" y="356" width="100" height="100" rx="20" fill="#e8b64c"/>
-  <text x="316" y="432" font-family="Arial, sans-serif" font-size="64" font-weight="800" fill="#3b2405" text-anchor="middle">SH</text>
+  <rect x="132" y="368" width="110" height="110" rx="22" fill="#fdf6ec"/>
+  <text x="187" y="450" font-family="Arial, sans-serif" font-size="70" font-weight="800" fill="#1a1a1d" text-anchor="middle">F</text>
+  <rect x="270" y="368" width="110" height="110" rx="22" fill="#e8b64c"/>
+  <text x="325" y="450" font-family="Arial, sans-serif" font-size="62" font-weight="800" fill="#3b2405" text-anchor="middle">SH</text>
 </svg>

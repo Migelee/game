@@ -5,23 +5,32 @@
 ## Si luhet
 
 - Në fund të ekranit është **rrota e shkronjave**.
-- **Lidh shkronjat** me gisht (ose me mi) për të formuar një fjalë shqipe.
+- **Lidh shkronjat** me gisht (ose me mi) për të formuar një fjalë shqipe —
+  shkronjat fluturojnë drejt rrjetës kur fjala është e saktë.
 - Fjalët e sakta mbushin **rrjetën e fjalëkryqit** sipër.
-- Fjalë të tjera të vlefshme shqipe që nuk janë në rrjetë japin **monedha bonus** ✨.
-- Me monedha mund të blesh **ndihma** 💡 që zbulojnë një shkronjë.
+- Fjalë të tjera të vlefshme shqipe që nuk janë në rrjetë japin **monedha
+  bonus** ✨ dhe një **yll për kavanozin** ⭐ — mbush 10 yje dhe fiton +40 🪙.
+- Gjetjet radhazi pa gabime ndezin **serinë** 🔥 që jep monedha shtesë.
+- Tri lloje ndihmash: 💡 zbulon një shkronjë të rastit (25 🪙),
+  🎯 zbulon qelizën që zgjedh vetë (35 🪙), 💣 zbulon tri shkronja (60 🪙).
+- Çdo nivel vlerësohet me **1–3 yje** ★ sipas ndihmave e gabimeve.
 - Prek një fjalë të gjetur në rrjetë për të parë **kuptimin e saj** sipas fjalorit.
+- Tinguj të sintetizuar (pa skedarë audio) dhe dridhje — çelësi 🔊 i fik.
 
 ## Nivelet — nga më i lehti te më i vështiri
 
-30 nivele të ndara në 5 qytete/vende historike shqiptare, me vështirësi në rritje:
+48 nivele të ndara në 8 qytete/vende historike shqiptare, me vështirësi në rritje:
 
 | Paketa | Vështirësia | Shkronja |
 |---|---|---|
-| Butrinti | Fillestar | 3–4 |
-| Shkodra | I lehtë | 4 |
-| Berati | Mesatar | 4–5 |
-| Vlora | I vështirë | 5–6 |
-| Gjirokastra | Mjeshtër | 5–6 (deri në 10 fjalë për nivel) |
+| 🏛️ Butrinti | Fillestar | 3–4 |
+| 🏰 Shkodra | I lehtë | 4 |
+| ⚔️ Kruja | Nxënës | 4 |
+| 🏘️ Berati | Mesatar | 4–5 |
+| ⚓ Durrësi | I përparuar | 5 |
+| 🌊 Vlora | I vështirë | 5–6 |
+| 🎻 Korça | Ekspert | 5–6 |
+| 🪨 Gjirokastra | Mjeshtër | 5–6 (deri në 10 fjalë për nivel) |
 
 ## Burimi i fjalëve
 
