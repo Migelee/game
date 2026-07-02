@@ -122,8 +122,17 @@
     },
     tick(n) { this.tone(440 * Math.pow(2, n / 12), 0.09, "triangle", 0.12); },
     untick(n) { this.tone(440 * Math.pow(2, n / 12), 0.07, "triangle", 0.07); },
+    uiTick() { this.tone(920, 0.045, "sine", 0.05); },
+    pop(i) { this.tone(620 + i * 85, 0.08, "sine", 0.1); },
+    star(i) { this.tone(1046 * Math.pow(2, i / 6), 0.2, "triangle", 0.13); },
+    golden() { [784, 988, 1175, 1568, 1976].forEach((f, i) => this.tone(f, 0.28, "triangle", 0.12, i * 0.08)); vibrate([25, 40, 60]); },
     bad() { this.tone(150, 0.2, "sawtooth", 0.09); vibrate(80); },
-    word() { [523, 659, 784].forEach((f, i) => this.tone(f, 0.16, "triangle", 0.13, i * 0.07)); vibrate(25); },
+    // sa më e gjatë fjala, aq më i madh akordi
+    word(len) {
+      const seq = [523, 659, 784].concat([1046, 1318, 1568, 2093].slice(0, Math.max(0, (len || 3) - 4)));
+      seq.forEach((f, i) => this.tone(f, 0.16, "triangle", 0.13, i * 0.07));
+      vibrate(25);
+    },
     bonus() { [880, 1174, 1568].forEach((f, i) => this.tone(f, 0.1, "sine", 0.1, i * 0.06)); vibrate(15); },
     coin() { this.tone(1568, 0.09, "sine", 0.1); this.tone(2093, 0.12, "sine", 0.08, 0.07); },
     hint() { this.tone(700, 0.12, "sine", 0.12); this.tone(1050, 0.16, "sine", 0.1, 0.09); },
@@ -184,9 +193,22 @@
     el.classList.add("bump");
   }
 
+  // numri rrjedh drejt vlerës së re — asnjë kërcim i thatë shifrash
+  function animateNumber(el, to) {
+    const from = parseInt(el.textContent, 10) || 0;
+    if (from === to) { el.textContent = to; return; }
+    const t0 = performance.now();
+    const dur = 550;
+    (function step(t) {
+      const p = Math.min(1, (t - t0) / dur);
+      el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+
   function updateCoins() {
-    $("coins-packs").textContent = store.coins;
-    $("coins-game").textContent = store.coins;
+    animateNumber($("coins-packs"), store.coins);
+    animateNumber($("coins-game"), store.coins);
   }
 
   function updateJar() {
@@ -223,6 +245,8 @@
     const badge = $("streak-badge");
     $("streak-count").textContent = streak;
     badge.classList.toggle("show", streak >= 2);
+    // flaka rritet me serinë
+    badge.style.transform = streak >= 2 ? `scale(${1 + Math.min(streak, 8) * 0.06})` : "";
   }
 
   /* ---------- Njoftimet ---------- */
@@ -237,6 +261,29 @@
 
   /* ---------- Efektet fluturuese ---------- */
   const fx = $("fx-layer");
+
+  /* Xixa (grimca) që shpërndahen nga një pikë. */
+  function sparks(x, y, n, color) {
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement("i");
+      s.className = "spark";
+      s.style.left = x - 3 + "px";
+      s.style.top = y - 3 + "px";
+      s.style.background = color || "#ffd267";
+      const ang = Math.random() * Math.PI * 2;
+      const dist = 24 + Math.random() * 42;
+      s.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+      s.style.setProperty("--dy", Math.sin(ang) * dist + "px");
+      s.style.setProperty("--dur", 0.45 + Math.random() * 0.4 + "s");
+      fx.appendChild(s);
+      setTimeout(() => s.remove(), 900);
+    }
+  }
+
+  function sparksAt(el, n, color) {
+    const r = el.getBoundingClientRect();
+    sparks(r.left + r.width / 2, r.top + r.height / 2, n, color);
+  }
 
   function flyEmoji(emoji, fromEl, toEl, onDone) {
     const a = fromEl.getBoundingClientRect();
@@ -373,6 +420,12 @@
       targetMode: false,
       flying: 0,
     };
+    // Fjala e Artë: një fjalë e fshehur e nivelit jep +10 monedha shtesë
+    const longest = level.words[0];
+    const goldenCandidates = level.words.filter((w) => w.length >= 3 && w !== longest);
+    current.goldenWord = goldenCandidates.length
+      ? goldenCandidates[(index * 31) % goldenCandidates.length]
+      : null;
     setStreak(0);
 
     $("level-city").textContent = level.pack.emoji + " " + level.pack.name;
@@ -392,8 +445,12 @@
   }
 
   function updateWordCount() {
-    $("level-num").textContent =
-      `Niveli ${current.index + 1} · ${current.foundWords.size}/${current.grid.placements.length}`;
+    const found = current.foundWords.size;
+    const total = current.grid.placements.length;
+    $("level-num").textContent = `Niveli ${current.index + 1} · ${found}/${total}`;
+    const fill = $("level-progress-fill");
+    fill.style.width = (found / total) * 100 + "%";
+    fill.classList.toggle("full", found === total);
   }
 
   /* ---------- Vazhdimi i nivelit të lënë përgjysmë ---------- */
@@ -422,6 +479,14 @@
     });
     current.toolUses = saved.toolUses || 0;
     current.wrongGuesses = saved.wrongGuesses || 0;
+    // rikthe shkëlqimin e Fjalës së Artë nëse ishte gjetur
+    if (current.goldenWord && current.foundWords.has(current.goldenWord)) {
+      const p = current.grid.placements.find((pl) => pl.word === current.goldenWord);
+      if (p) wordCells(p).forEach((k) => {
+        const cell = current.cellEls.get(k);
+        if (cell) cell.classList.add("golden");
+      });
+    }
   }
 
   function renderGrid() {
@@ -596,7 +661,13 @@
       return;
     }
     selection.push(i);
-    current.wheelNodes[i].el.classList.add("selected");
+    const node = current.wheelNodes[i].el;
+    node.classList.add("selected");
+    // valëzim rrethor nga shkronja e prekur
+    const rip = document.createElement("span");
+    rip.className = "ripple";
+    node.appendChild(rip);
+    setTimeout(() => rip.remove(), 500);
     Sound.tick(selection.length);
     vibrate(10);
     updateCurrentWord();
@@ -656,6 +727,7 @@
       current.bonusFound.add(word);
       onCorrectFind();
       Sound.bonus();
+      sparksAt(wheelEl, 7, "#ffe9b0");
       addCoins(BONUS_REWARD, wheelEl);
       addJarStar(wheelEl);
       saveProgress();
@@ -676,6 +748,8 @@
   function onCorrectFind() {
     $("tutorial").classList.remove("show");
     setStreak(streak + 1);
+    if (streak === 5) showPraise("SERI 5! 🔥");
+    if (streak === 8) showPraise("I NDALSHËM S'JE! 🔥🔥");
     if (streak >= 3) {
       addCoins(STREAK_REWARD, $("streak-badge"));
       toast(`🔥 Seri ${streak}! +${STREAK_REWARD} 🪙`, 1100);
@@ -697,7 +771,15 @@
     current.revealed.add(key);
     const cell = current.cellEls.get(key);
     cell.classList.add("revealed", "pop");
-    if (flash) cell.classList.add("gold-flash");
+    // vala rrethore e goditjes në qelizë
+    const shock = document.createElement("span");
+    shock.className = "shock";
+    cell.appendChild(shock);
+    setTimeout(() => shock.remove(), 550);
+    if (flash) {
+      cell.classList.add("gold-flash");
+      sparksAt(cell, 5);
+    }
   }
 
   /* Shkronjat fluturojnë nga rrota drejt qelizave të rrjetës. */
@@ -711,8 +793,10 @@
 
   function revealWordAnimated(word, usedNodes) {
     current.foundWords.add(word);
-    Sound.word();
-    if (word.length === current.level.letters.length) showPraise("LEGJENDARE!");
+    Sound.word(word.length);
+    const isGolden = word === current.goldenWord;
+    if (isGolden) showPraise("FJALA E ARTË! +10");
+    else if (word.length === current.level.letters.length) showPraise("LEGJENDARE!");
     else if (word.length >= 6) showPraise("MREKULLI!");
     else if (word.length === 5) showPraise("SHKËLQYESHËM!");
     const placement = current.grid.placements.find((p) => p.word === word);
@@ -725,8 +809,12 @@
       current.flying++;
       flyLetterTo(word[i], fromEl.getBoundingClientRect(), cell.getBoundingClientRect(), i * 60, () => {
         revealCell(k);
+        Sound.pop(i);
+        sparksAt(cell, isGolden ? 8 : 3, isGolden ? "#ffe9b0" : undefined);
+        if (isGolden) cell.classList.add("golden");
         current.flying--;
         if (current.flying === 0) {
+          if (isGolden) { Sound.golden(); addCoins(10, cell); }
           checkIndirectlyCompleted();
           checkWin();
         }
@@ -737,6 +825,7 @@
     toast(gloss ? `${word} — ${gloss}` : word, 2200);
     // nëse çdo qelizë ishte zbuluar tashmë (nga ndihmat), kontrollo direkt
     if (keys.every((k) => current.revealed.has(k))) {
+      if (isGolden) { Sound.golden(); addCoins(10, $("grid")); }
       checkIndirectlyCompleted();
       setTimeout(checkWin, 300);
     }
@@ -843,8 +932,23 @@
       store.completed = current.index + 1;
     }
 
+    /* Sekuenca e festës: vala shndritëse nëpër rrjetë → parulla e artë
+     * përshkon ekranin → konfeti e fanfarë → dritarja me yjet që bien
+     * njëri pas tjetrit me tingull. */
+    current.grid.placements.forEach((p) => {
+      wordCells(p).forEach((k) => {
+        const cell = current.cellEls.get(k);
+        const [x, y] = k.split(",").map(Number);
+        setTimeout(() => cell && cell.classList.add("shimmer"), (x + y) * 55);
+      });
+    });
+    const banner = $("win-banner");
+    banner.classList.remove("go");
+    void banner.offsetWidth;
+    banner.classList.add("go");
+    sparksAt($("grid"), 14);
     Sound.win();
-    confetti();
+    setTimeout(confetti, 250);
 
     const starEls = $("win-stars").querySelectorAll("i");
     starEls.forEach((el, i) => el.classList.toggle("lit", i < stars));
@@ -870,7 +974,16 @@
       (bonusCount ? ` · ${bonusCount} fjalë bonus ⭐` : "") +
       (isLast ? " — Përfundove gjithë lojën! 🇦🇱" : "");
     $("btn-next").style.display = isLast ? "none" : "";
-    setTimeout(() => $("overlay-win").classList.add("show"), 650);
+    setTimeout(() => {
+      $("overlay-win").classList.add("show");
+      // yjet bien njëri pas tjetrit, secili me tingullin e vet
+      for (let i = 0; i < stars; i++) {
+        setTimeout(() => {
+          Sound.star(i);
+          sparksAt($("win-stars"), 6);
+        }, 150 + i * 200);
+      }
+    }, 1500);
   }
 
   /* ---------- Reklamat dhe dyqani ---------- */
@@ -1016,6 +1129,11 @@
   /* ---------- Nisja ---------- */
   // pa menu konteksti me prekje të gjatë — si aplikacion i vërtetë
   document.addEventListener("contextmenu", (e) => e.preventDefault());
+
+  // çdo buton përgjigjet me një tik të lehtë — asgjë s'ndihet "e vdekur"
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("button")) Sound.uiTick();
+  });
 
   updateCoins();
   updateJar();

@@ -207,6 +207,8 @@ html, body {
   cursor: pointer;
 }
 .icon-btn.small { font-size: 17px; width: 38px; height: 38px; }
+.icon-btn:active { transform: scale(0.9); }
+.streak-badge { transition: opacity 0.25s, transform 0.25s; }
 .icon-btn.muted { opacity: 0.45; }
 .coin-chip, .jar-chip {
   background: rgba(0,0,0,0.32);
@@ -315,7 +317,26 @@ html, body {
   min-height: 0;
 }
 .grid { display: grid; gap: 5px; }
+.level-progress {
+  height: 4px;
+  margin: 0 16px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.10);
+  overflow: hidden;
+}
+.level-progress b {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-light));
+  transition: width 0.45s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+.level-progress b.full {
+  box-shadow: 0 0 12px rgba(255,210,103,0.9);
+}
 .cell {
+  position: relative;
   width: var(--cell-size, 44px);
   height: var(--cell-size, 44px);
   border-radius: 22%;
@@ -347,6 +368,28 @@ html, body {
 @keyframes gold-flash {
   0% { box-shadow: 0 0 0 0 rgba(255,210,103,0.9); }
   100% { box-shadow: 0 0 0 14px rgba(255,210,103,0); }
+}
+.cell.golden {
+  background: linear-gradient(180deg, #ffe9b0, var(--gold) 70%);
+  color: #3b2405;
+}
+.cell.shimmer { animation: shimmer 0.7s ease; }
+@keyframes shimmer {
+  0% { filter: brightness(1); }
+  40% { filter: brightness(2); transform: scale(1.1); }
+  100% { filter: brightness(1); transform: scale(1); }
+}
+.cell .shock {
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid rgba(255,210,103,0.9);
+  pointer-events: none;
+  animation: shockwave 0.5s ease-out forwards;
+}
+@keyframes shockwave {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(2.1); opacity: 0; }
 }
 .cell.pickable {
   animation: pickable 1s ease-in-out infinite;
@@ -478,6 +521,26 @@ html, body {
   transform: scale(1.14);
   box-shadow: 0 0 16px rgba(255,210,103,0.65), 0 4px 0 #8a621c;
 }
+.wheel-letter .ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2.5px solid rgba(232,182,76,0.85);
+  pointer-events: none;
+  animation: ripple 0.45s ease-out forwards;
+}
+@keyframes ripple {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(2); opacity: 0; }
+}
+/* pulsim i lehtë "shikomëni" për butonat e ndihmave */
+#btn-hint  { animation: attention 9s ease-in-out 4s infinite; }
+#btn-target { animation: attention 9s ease-in-out 7s infinite; }
+@keyframes attention {
+  0%, 88%, 100% { box-shadow: none; }
+  92% { box-shadow: 0 0 18px rgba(255,210,103,0.85); transform: scale(1.06); }
+  96% { transform: scale(1); }
+}
 
 /* ---------- Njoftimet ---------- */
 .toast {
@@ -560,6 +623,44 @@ html, body {
   font-size: 20px;
   transition: transform 0.7s cubic-bezier(0.4, -0.2, 0.4, 1), opacity 0.7s;
   will-change: transform;
+}
+.spark {
+  position: fixed;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: spark-fly var(--dur, 0.65s) ease-out forwards;
+}
+@keyframes spark-fly {
+  from { transform: translate(0, 0) scale(1); opacity: 1; }
+  to { transform: translate(var(--dx, 0), var(--dy, -40px)) scale(0.1); opacity: 0; }
+}
+.win-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 34%;
+  text-align: center;
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  background: linear-gradient(180deg, #ffe1a0, var(--gold) 60%, #c9922e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.6));
+  transform: translateX(-110vw);
+  z-index: 48;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.win-banner.go { animation: banner-sweep 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+@keyframes banner-sweep {
+  0% { transform: translateX(-110vw); opacity: 0; }
+  22% { transform: translateX(0); opacity: 1; }
+  74% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(110vw); opacity: 0; }
 }
 .confetti-bit {
   position: fixed;
