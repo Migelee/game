@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c8102e"/>
+      <stop offset="1" stop-color="#7c0d18"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" fill="url(#bg)"/>
+  <!-- shqiponja e stilizuar -->
+  <path d="M256 96 L232 150 L164 112 L204 190 L112 180 L192 238 L136 288 L212 268 L202 348 L248 282 L256 372 L264 282 L310 348 L300 268 L376 288 L320 238 L400 180 L308 190 L348 112 L280 150 Z"
+        fill="#1a1a1d"/>
+  <!-- pllakëza shkronje -->
+  <rect x="146" y="356" width="100" height="100" rx="20" fill="#fdf6ec"/>
+  <text x="196" y="432" font-family="Arial, sans-serif" font-size="64" font-weight="800" fill="#1a1a1d" text-anchor="middle">F</text>
+  <rect x="266" y="356" width="100" height="100" rx="20" fill="#e8b64c"/>
+  <text x="316" y="432" font-family="Arial, sans-serif" font-size="64" font-weight="800" fill="#3b2405" text-anchor="middle">SH</text>
+</svg>

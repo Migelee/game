@@ -1,0 +1,13 @@
+{
+  "appId": "com.fjaleshqip.game",
+  "appName": "Fjalë Shqip",
+  "webDir": "www",
+  "backgroundColor": "#8f1119",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#8f1119"
+  },
+  "android": {
+    "backgroundColor": "#8f1119"
+  }
+}

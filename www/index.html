@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#8f1119">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Fjalë Shqip — loja e fjalëkryqit me fjalë shqipe. Lidh shkronjat dhe zbulo fjalët!">
+  <title>Fjalë Shqip — Fjalëkryqi Shqiptar</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Ekrani kryesor -->
+  <div id="screen-home" class="screen active">
+    <div class="home-inner">
+      <div class="eagle-badge" aria-hidden="true">
+        <svg viewBox="0 0 100 100" width="86" height="86">
+          <circle cx="50" cy="50" r="48" fill="#1a1a1d" stroke="#e8b64c" stroke-width="2.5"/>
+          <path d="M50 22 L44 34 L30 26 L38 42 L20 40 L36 52 L24 62 L40 58 L38 74 L48 60 L50 78 L52 60 L62 74 L60 58 L76 62 L64 52 L80 40 L62 42 L70 26 L56 34 Z" fill="#c8102e"/>
+        </svg>
+      </div>
+      <h1 class="title">Fjalë <span>Shqip</span></h1>
+      <p class="tagline">Lidh shkronjat · Zbulo fjalët shqipe</p>
+      <button id="btn-play" class="btn btn-primary">LUAJ</button>
+      <button id="btn-packs" class="btn btn-ghost">Qytetet</button>
+      <p class="source-note">Fjalët sipas Fjalorit të Gjuhës Shqipe</p>
+    </div>
+  </div>
+
+  <!-- Ekrani i paketave (qyteteve) -->
+  <div id="screen-packs" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-packs-back" aria-label="Kthehu">‹</button>
+      <h2>Qytetet</h2>
+      <div class="coin-chip">🪙 <span id="coins-packs">0</span></div>
+    </header>
+    <div id="packs-list" class="packs-list"></div>
+  </div>
+
+  <!-- Ekrani i lojës -->
+  <div id="screen-game" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-game-back" aria-label="Kthehu">‹</button>
+      <div class="level-label">
+        <div id="level-city" class="level-city"></div>
+        <div id="level-num" class="level-num"></div>
+      </div>
+      <div class="coin-chip">🪙 <span id="coins-game">0</span></div>
+    </header>
+
+    <div id="grid-wrap" class="grid-wrap">
+      <div id="grid" class="grid"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <div class="bottom-area">
+      <div id="current-word" class="current-word"></div>
+      <div class="wheel-row">
+        <button class="tool-btn" id="btn-shuffle" title="Përziej shkronjat">⟳</button>
+        <div id="wheel" class="wheel">
+          <svg id="wheel-lines" class="wheel-lines"></svg>
+        </div>
+        <button class="tool-btn" id="btn-hint" title="Ndihmë (25 monedha)">💡</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dritarja e fitores -->
+  <div id="overlay-win" class="overlay">
+    <div class="overlay-card">
+      <div class="win-eagle">🎉</div>
+      <h2>Të lumtë!</h2>
+      <p id="win-text"></p>
+      <button id="btn-next" class="btn btn-primary">Niveli tjetër</button>
+      <button id="btn-win-menu" class="btn btn-ghost">Qytetet</button>
+    </div>
+  </div>
+
+  <!-- Dritarja e kuptimit të fjalës -->
+  <div id="overlay-gloss" class="overlay">
+    <div class="overlay-card">
+      <h2 id="gloss-word"></h2>
+      <p id="gloss-text"></p>
+      <p class="source-note">— Fjalori i Gjuhës Shqipe</p>
+      <button id="btn-gloss-close" class="btn btn-primary">Mbylle</button>
+    </div>
+  </div>
+
+  <script src="js/levels.js"></script>
+  <script src="js/crossword.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "Fjalë Shqip — Fjalëkryqi Shqiptar",
+  "short_name": "Fjalë Shqip",
+  "description": "Lidh shkronjat dhe zbulo fjalët shqipe! Fjalëkryq me fjalë nga Fjalori i Gjuhës Shqipe.",
+  "lang": "sq",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#8f1119",
+  "theme_color": "#8f1119",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "fjale-shqip",
+  "version": "1.0.0",
+  "description": "Fjalë Shqip — lojë fjalëkryqi me fjalë shqipe (si Words of Wonders), me temë Shqipërinë.",
+  "private": true,
+  "scripts": {
+    "start": "npx serve www",
+    "validate": "node tools/validate.js",
+    "ios:add": "npx cap add ios",
+    "ios:sync": "npx cap sync ios",
+    "ios:open": "npx cap open ios",
+    "android:add": "npx cap add android",
+    "android:sync": "npx cap sync android"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "@capacitor/android": "^6.0.0"
+  }
+}
