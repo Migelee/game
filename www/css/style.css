@@ -150,6 +150,7 @@ html, body {
   -webkit-text-fill-color: transparent;
 }
 .tagline { opacity: 0.85; font-size: 15px; margin-bottom: 16px; }
+.home-progress { font-size: 13px; color: var(--gold-light); opacity: 0.85; font-weight: 700; }
 .source-note { opacity: 0.6; font-size: 12px; margin-top: 18px; font-style: italic; }
 .mountains {
   position: absolute;
@@ -257,6 +258,7 @@ html, body {
 }
 .pack-emoji { font-size: 26px; }
 .pack-name { font-size: 18px; font-weight: 800; flex: 1; }
+.pack-count { font-size: 11px; font-weight: 800; opacity: 0.65; margin-right: 6px; }
 .pack-sub { font-size: 11px; color: var(--gold); text-transform: uppercase; letter-spacing: 1.5px; }
 .pack-progress {
   height: 6px;
@@ -395,6 +397,11 @@ html, body {
   animation: pickable 1s ease-in-out infinite;
   cursor: pointer;
 }
+.cell.locate { animation: locate 0.7s ease; }
+@keyframes locate {
+  0%, 100% { transform: scale(1); box-shadow: 0 3px 0 rgba(0,0,0,0.25); }
+  45% { transform: scale(1.16); box-shadow: 0 0 16px rgba(255,210,103,0.95); }
+}
 @keyframes pickable {
   0%, 100% { border-color: rgba(255,210,103,0.5); box-shadow: inset 0 0 0 1px rgba(255,210,103,0.4); }
   50% { border-color: var(--gold-light); box-shadow: inset 0 0 0 2px rgba(255,210,103,0.9), 0 0 12px rgba(255,210,103,0.4); }
@@ -520,6 +527,43 @@ html, body {
   color: #3b2405;
   transform: scale(1.14);
   box-shadow: 0 0 16px rgba(255,210,103,0.65), 0 4px 0 #8a621c;
+}
+/* butonat qendrorë për mënyrën me prekje (pa zvarritje) */
+.wheel-center {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: none;
+}
+.wheel-center.show { display: flex; }
+.wc-btn {
+  pointer-events: auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: none;
+  font-size: 21px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  animation: wc-in 0.18s cubic-bezier(0.34, 1.4, 0.64, 1);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+}
+@keyframes wc-in { from { transform: scale(0.4); } to { transform: scale(1); } }
+.wc-btn.ok { background: linear-gradient(180deg, #5cc98a, var(--found)); color: #fff; }
+.wc-btn.no { background: rgba(255,255,255,0.16); color: var(--paper); }
+.wheel.wrong {
+  border-color: #ff6a5e;
+  box-shadow: inset 0 6px 18px rgba(0,0,0,0.35), 0 0 22px rgba(255, 90, 80, 0.55);
+}
+.tool-btn.cant { opacity: 0.45; }
+.tool-btn.nudge { animation: nudge 0.8s ease 3; }
+@keyframes nudge {
+  0%, 100% { transform: none; box-shadow: none; }
+  50% { transform: scale(1.14); box-shadow: 0 0 18px rgba(255,210,103,0.85); }
 }
 .wheel-letter .ripple {
   position: absolute;
@@ -883,6 +927,14 @@ html, body {
   color: var(--gold-light);
 }
 .btn:disabled { opacity: 0.45; cursor: default; }
+
+/* respekto lëvizjen e reduktuar të sistemit (aksesueshmëri) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    transition-duration: 0.001s !important;
+  }
+}
 
 @media (max-height: 680px) {
   .wheel { width: min(54vw, 205px); height: min(54vw, 205px); }

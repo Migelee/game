@@ -53,6 +53,7 @@
       <h1 class="title">Fjalë <span>Shqip</span></h1>
       <p class="tagline">Lidh shkronjat · Zbulo fjalët shqipe</p>
       <button id="btn-play" class="btn btn-primary">LUAJ</button>
+      <div id="home-progress" class="home-progress"></div>
       <button id="btn-packs" class="btn btn-ghost">🗺️ Qytetet</button>
       <p class="source-note">Fjalët sipas Fjalorit të Gjuhës Shqipe</p>
     </div>
@@ -103,6 +104,10 @@
         </div>
         <div id="wheel" class="wheel">
           <svg id="wheel-lines" class="wheel-lines"></svg>
+          <div id="wheel-center" class="wheel-center">
+            <button id="btn-clear-word" class="wc-btn no" aria-label="Pastro">✕</button>
+            <button id="btn-submit-word" class="wc-btn ok" aria-label="Dërgo fjalën">✓</button>
+          </div>
         </div>
         <div class="tool-col">
           <button class="tool-btn" id="btn-hint" title="Zbulon një shkronjë (25 monedha)">💡<b class="cost">25</b></button>
@@ -191,6 +196,9 @@
         <span class="set-label">📳 Dridhjet</span>
         <input type="checkbox" id="tgl-vibration"><i class="switch"></i>
       </label>
+      <button class="set-row set-btn" id="btn-restart-level" style="display:none">
+        <span class="set-label">↻ Rifillo nivelin</span><span class="chev">›</span>
+      </button>
       <button class="set-row set-btn" id="btn-restore">
         <span class="set-label">🔄 Rikthe blerjet</span><span class="chev">›</span>
       </button>

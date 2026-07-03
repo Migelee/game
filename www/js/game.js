@@ -91,6 +91,16 @@
   function showScreen(name) {
     Object.values(screens).forEach((s) => s.classList.remove("active"));
     screens[name].classList.add("active");
+    if (name === "home") refreshHome();
+  }
+
+  /* Ekrani kryesor tregon gjithmonë ku ke mbetur. */
+  function refreshHome() {
+    const idx = Math.min(store.completed, LEVELS.length - 1);
+    const lv = LEVELS[idx];
+    $("btn-play").textContent = store.completed > 0 ? "VAZHDO" : "LUAJ";
+    $("home-progress").textContent =
+      store.completed > 0 ? `Niveli ${idx + 1} · ${lv.pack.emoji} ${lv.pack.name}` : "";
   }
 
   function vibrate(pattern) {
@@ -215,6 +225,13 @@
   function updateCoins() {
     animateNumber($("coins-packs"), store.coins);
     animateNumber($("coins-game"), store.coins);
+    updateToolButtons();
+  }
+
+  /* Ndihmat që s'i përballon dot duken të zbehta — e qartë me një shikim. */
+  function updateToolButtons() {
+    [["btn-hint", COST_HINT], ["btn-target", COST_TARGET], ["btn-bomb", COST_BOMB]]
+      .forEach(([id, cost]) => $(id).classList.toggle("cant", store.coins < cost));
   }
 
   function updateJar() {
@@ -257,7 +274,9 @@
 
   /* ---------- Njoftimet ---------- */
   let toastTimer = null;
-  function toast(msg, ms = 1500) {
+  function toast(msg, ms) {
+    // tekstet e gjata qëndrojnë më gjatë — koha sipas gjatësisë
+    ms = ms || Math.min(3400, 1100 + msg.length * 35);
     const el = $("toast");
     el.textContent = msg;
     el.classList.add("show");
@@ -365,20 +384,26 @@
     list.innerHTML = "";
     const stars = store.stars;
     let globalIndex = 0;
+    let currentCard = null;
     ALL_PACKS.forEach((pack) => {
       const card = document.createElement("div");
       card.className = "pack-card";
       card.style.setProperty("--pack-color", pack.color);
 
+      const packStart = globalIndex;
       const done = pack.levels.reduce((acc, _, li) => {
         const idx = globalIndex + li;
         return acc + (idx < store.completed ? 1 : 0);
       }, 0);
+      if (store.completed >= packStart && store.completed < packStart + pack.levels.length) {
+        currentCard = card;
+      }
 
       card.innerHTML =
         `<div class="pack-head">` +
         `<span class="pack-emoji">${pack.emoji}</span>` +
         `<span class="pack-name">${pack.name}</span>` +
+        `<span class="pack-count">${done}/${pack.levels.length}</span>` +
         `<span class="pack-sub">${pack.subtitle}</span>` +
         `</div>` +
         `<div class="pack-progress"><b style="width:${(done / pack.levels.length) * 100}%"></b></div>`;
@@ -403,6 +428,12 @@
       list.appendChild(card);
     });
     updateCoins();
+    // çohu drejt e te paketa ku ke mbetur — pa kërkim nëpër 200 paketa
+    if (currentCard) {
+      requestAnimationFrame(() => {
+        list.scrollTop = Math.max(0, currentCard.offsetTop - 10);
+      });
+    }
   }
 
   /* ---------- Ngarkimi i nivelit ---------- */
@@ -449,6 +480,7 @@
     updateWordCount();
     updateCoins();
     updateJar();
+    armIdleTip();
   }
 
   function updateWordCount() {
@@ -588,6 +620,7 @@
     selection = [];
     drawLines();
     updateCurrentWord();
+    updateCenterButtons();
 
     const letters = current.letters;
     const R = wheelEl.clientWidth / 2;
@@ -680,19 +713,48 @@
     updateCurrentWord();
   }
 
+  /* Dy mënyra futjeje, pa asnjë cilësim: zvarrit gishtin nëpër shkronja
+   * (si zakonisht) OSE prek shkronjat një nga një — atëherë në qendër
+   * të rrotës dalin ✓ për ta dërguar fjalën dhe ✕ për ta pastruar. */
+  let downInfo = null;
+
+  function updateCenterButtons() {
+    $("wheel-center").classList.toggle("show", selection.length > 0 && !dragging);
+  }
+
+  function clearSelection() {
+    selection.forEach((i) => current.wheelNodes[i].el.classList.remove("selected"));
+    selection = [];
+    drawLines();
+    updateCurrentWord();
+    updateCenterButtons();
+  }
+
+  function submitSelection() {
+    const word = selection.map((i) => current.wheelNodes[i].ch).join("");
+    const usedNodes = selection.map((i) => current.wheelNodes[i]);
+    clearSelection();
+    if (word.length >= 2) submitWord(word, usedNodes);
+  }
+
   wheelEl.addEventListener("pointerdown", (ev) => {
     if (!current) return;
     dragging = true;
     wheelEl.setPointerCapture(ev.pointerId);
     const pt = wheelPoint(ev);
     const i = hitNode(pt);
-    if (i >= 0) selectNode(i);
+    downInfo = { pt, moved: false, hit: i, wasSelected: i >= 0 && selection.includes(i) };
+    if (i >= 0 && !downInfo.wasSelected) selectNode(i);
     drawLines(pt);
+    updateCenterButtons();
   });
 
   wheelEl.addEventListener("pointermove", (ev) => {
     if (!dragging || !current) return;
     const pt = wheelPoint(ev);
+    if (downInfo && Math.hypot(pt.x - downInfo.pt.x, pt.y - downInfo.pt.y) > 14) {
+      downInfo.moved = true;
+    }
     const i = hitNode(pt);
     if (i >= 0) selectNode(i);
     drawLines(pt);
@@ -701,24 +763,49 @@
   function endDrag() {
     if (!dragging || !current) return;
     dragging = false;
-    const word = selection.map((i) => current.wheelNodes[i].ch).join("");
-    const usedNodes = selection.map((i) => current.wheelNodes[i]);
-    selection.forEach((i) => current.wheelNodes[i].el.classList.remove("selected"));
-    selection = [];
-    drawLines();
-    updateCurrentWord();
-    if (word.length >= 2) submitWord(word, usedNodes);
+
+    // prekje e thjeshtë (pa zvarritje): mbaj përzgjedhjen për mënyrën me prekje
+    if (downInfo && !downInfo.moved) {
+      // riprekja e shkronjës së fundit e heq atë (korrigjim i lehtë)
+      if (downInfo.wasSelected && selection[selection.length - 1] === downInfo.hit) {
+        const removed = selection.pop();
+        current.wheelNodes[removed].el.classList.remove("selected");
+        Sound.untick(selection.length);
+        updateCurrentWord();
+      }
+      drawLines();
+      updateCenterButtons();
+      return;
+    }
+
+    submitSelection();
   }
   wheelEl.addEventListener("pointerup", endDrag);
   wheelEl.addEventListener("pointercancel", endDrag);
+
+  ["btn-submit-word", "btn-clear-word"].forEach((id) => {
+    $(id).addEventListener("pointerdown", (ev) => ev.stopPropagation());
+  });
+  $("btn-submit-word").addEventListener("click", () => { if (current) submitSelection(); });
+  $("btn-clear-word").addEventListener("click", () => { if (current) clearSelection(); });
 
   /* ---------- Kontrolli i fjalës ---------- */
   function submitWord(word, usedNodes) {
     const { level } = current;
 
+    armIdleTip();
+
     if (level.words.includes(word)) {
       if (current.foundWords.has(word)) {
         toast("E gjetur tashmë");
+        // tregoja në rrjetë ku është — pa e lënë lojtarin të kërkojë
+        const p = current.grid.placements.find((pl) => pl.word === word);
+        if (p) wordCells(p).forEach((k) => {
+          const cell = current.cellEls.get(k);
+          cell.classList.remove("locate");
+          void cell.offsetWidth;
+          cell.classList.add("locate");
+        });
         return;
       }
       onCorrectFind();
@@ -749,7 +836,33 @@
     cw.classList.remove("shake");
     void cw.offsetWidth;
     cw.classList.add("shake");
+    // rrota skuqet për një çast — shkak-pasojë e qartë
+    wheelEl.classList.add("wrong");
+    setTimeout(() => wheelEl.classList.remove("wrong"), 450);
     toast("Nuk është fjalë e nivelit");
+  }
+
+  /* ---------- Këshilla të buta kur lojtari ngec ---------- */
+  const TIPS = [
+    "Provo t'i përziesh shkronjat ⟳",
+    "Fjalët bonus japin monedha ✨ — provo çdo fjalë shqipe",
+    "Me 🎯 zgjedh vetë qelizën që zbulohet",
+    "Në çdo nivel fshihet një Fjalë e Artë 🏆",
+    "Prek shkronjat një nga një dhe shtyp ✓",
+  ];
+
+  function armIdleTip() {
+    if (!current) return;
+    clearTimeout(current.idleTimer);
+    if (current.won || current.tipShown) return;
+    current.idleTimer = setTimeout(() => {
+      if (!current || current.won || !screens.game.classList.contains("active")) return;
+      current.tipShown = true;
+      toast("💡 " + TIPS[current.index % TIPS.length]);
+      const sh = $("btn-shuffle");
+      sh.classList.add("nudge");
+      setTimeout(() => sh.classList.remove("nudge"), 2600);
+    }, 20000);
   }
 
   function onCorrectFind() {
@@ -874,7 +987,9 @@
 
   function useHint() {
     const keys = unrevealedKeys();
-    if (keys.length === 0 || !spendFor(COST_HINT)) return;
+    if (keys.length === 0) { toast("Gjithçka është zbuluar ✓"); return; }
+    if (!spendFor(COST_HINT)) return;
+    armIdleTip();
     Sound.hint();
     revealCell(keys[Math.floor(Math.random() * keys.length)], true);
     checkIndirectlyCompleted();
@@ -883,7 +998,9 @@
 
   function useBomb() {
     const keys = unrevealedKeys();
-    if (keys.length === 0 || !spendFor(COST_BOMB)) return;
+    if (keys.length === 0) { toast("Gjithçka është zbuluar ✓"); return; }
+    if (!spendFor(COST_BOMB)) return;
+    armIdleTip();
     Sound.hint();
     vibrate([30, 40, 30, 40, 30]);
     for (let n = 0; n < 3 && keys.length > 0; n++) {
@@ -897,7 +1014,7 @@
   function enterTargetMode() {
     if (current.targetMode) { exitTargetMode(); return; }
     const keys = unrevealedKeys();
-    if (keys.length === 0) return;
+    if (keys.length === 0) { toast("Gjithçka është zbuluar ✓"); return; }
     if (store.coins < COST_TARGET) {
       toast("S'ke monedha të mjaftueshme 🪙");
       Sound.bad();
@@ -929,6 +1046,7 @@
     if (!all) return;
     current.won = true;
     exitTargetMode();
+    clearTimeout(current.idleTimer);
     store.resume = null;
     store.winsSinceAd = store.winsSinceAd + 1;
 
@@ -1063,6 +1181,8 @@
     $("tgl-sound").checked = store.sound;
     $("tgl-music").checked = store.music;
     $("tgl-vibration").checked = store.vibration;
+    $("btn-restart-level").style.display =
+      current && screens.game.classList.contains("active") && !current.won ? "" : "none";
     $("version-note").textContent = `Fjalë Shqip v${VERSION} · Fjalët sipas Fjalorit të Gjuhës Shqipe`;
     $("overlay-settings").classList.add("show");
   }
@@ -1094,6 +1214,12 @@
   $("btn-settings").addEventListener("click", openSettings);
   $("btn-settings-home").addEventListener("click", openSettings);
   $("btn-settings-close").addEventListener("click", () => $("overlay-settings").classList.remove("show"));
+  $("btn-restart-level").addEventListener("click", () => {
+    $("overlay-settings").classList.remove("show");
+    store.resume = null;
+    startLevel(current.index);
+    toast("Niveli rifilloi nga e para ↻");
+  });
   $("btn-restore").addEventListener("click", doRestorePurchases);
   $("btn-restore-shop").addEventListener("click", doRestorePurchases);
   $("btn-privacy").addEventListener("click", () => window.open("privacy.html", "_blank"));
@@ -1142,8 +1268,19 @@
     if (e.target.closest("button")) Sound.uiTick();
   });
 
+  // kur aplikacioni shkon në sfond: ndal muzikën; kur kthehet: rifillo
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      Music.stop();
+    } else {
+      if (Sound.ctx && Sound.ctx.state === "suspended") Sound.ctx.resume();
+      if (store.music) Music.start();
+    }
+  });
+
   updateCoins();
   updateJar();
+  refreshHome();
   AdManager.init();
 
   // ekrani i nisjes zhduket kur gjithçka është gati
