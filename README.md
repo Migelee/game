@@ -64,38 +64,70 @@ Paketat e historisë (me shpjegime fjalori për çdo fjalë):
 | 🪨 Gjirokastra | Mjeshtër | 5–6 (deri në 10 fjalë për nivel) |
 | 🏙️ Tirana | Legjendar | 5–7, mbyllet me ATDHEU (11 fjalë) |
 
-## Monetizimi — falas me reklama (dhe "Hiq reklamat")
+## Monetizimi — si paguhesh nga reklamat
 
-Loja përdor modelin **free-to-play me reklama**, jo çmim blerjeje — për
-lojërat e fjalëve ky model sjell shumëfish më tepër shkarkime dhe të
-ardhura se një aplikacion me pagesë, sidomos për një treg gjuhësor të
-vogël. Tri burime:
+Loja është **falas me reklama** (modeli që sjell më shumë të ardhura për
+lojërat e fjalëve) plus blerja **"Hiq reklamat"**. Të gjitha rrjedhat
+kalojnë përmes `www/js/ads.js` (`AdManager`), i cili në telefon përdor
+**Google AdMob** dhe në shfletues tregon reklama të simuluara për
+zhvillim.
 
-1. **Reklama me shpërblim** 📺 — lojtari zgjedh vetë t'i shohë në
-   Dyqan (prek çipin 🪙 ＋) dhe fiton +30 monedha.
-2. **Reklama të plota** — pas çdo 3 nivelesh të fituara, kurrë para
-   nivelit 4 dhe kurrë për lojtarët premium.
-3. **"Hiq reklamat"** 🚫 — blerje një herë (IAP) që i fik të gjitha.
+### Ku shfaqen reklamat (e zbatuar tashmë në kod)
 
-Gjithçka kalon përmes `www/js/ads.js` (`AdManager`):
+| Vendi | Lloji | Kur | Pse |
+|---|---|---|---|
+| Dyqani: "Shiko një reklamë +30 🪙" | Rewarded | kur do lojtari | eCPM-ja më e lartë; me dëshirë |
+| Fitorja: "📺 Dyfisho shpërblimin" | Rewarded | pas çdo niveli | vendi më fitimprurës në lojërat e fjalëve |
+| Pas niveleve | Interstitial | çdo 3 fitore, kurrë para nivelit 4, ftohje 90 s | të ardhura pasive pa bezdisur |
+| Harta e qyteteve | Banner adaptiv | vetëm në atë ekran, kurrë në lojë | të ardhura të vazhdueshme |
 
-- **Në shfletues / gjatë zhvillimit** shfaqet një reklamë e simuluar me
-  numërim mbrapsht, kështu që gjithë rrjedha testohet pa SDK.
-- **Në telefon (Capacitor)** përdoret **Google AdMob** përmes
-  [`@capacitor-community/admob`](https://github.com/capacitor-community/admob).
-  ID-të në `CONFIG` janë ID-të **testuese** zyrtare të Google —
-  zëvendësoji me ID-të e aplikacionit tënd nga [admob.google.com](https://admob.google.com)
-  para publikimit, dhe shto `GADApplicationIdentifier` në `Info.plist` (iOS)
-  a `com.google.android.gms.ads.APPLICATION_ID` në `AndroidManifest.xml`.
-- Për blerjen "Hiq reklamat" regjistro produktin
-  `com.fjaleshqip.game.removeads` në App Store Connect / Play Console
-  dhe lidhe me një plugin blerjesh (p.sh. RevenueCat ose
-  `cordova-plugin-purchase`); `AdManager.purchaseRemoveAds()` e thërret
-  atë kur ekziston.
+Reklamat interstitial + banner **fiken përgjithmonë** me blerjen "Hiq
+reklamat"; rewarded mbeten gjithmonë (janë me dëshirë dhe në të mirë të
+lojtarit). Interstitial-et dhe rewarded **parangarkohen** që të hapen
+pa vonesë, dhe frekuenca respekton politikat e AdMob.
 
-Përfitime të tjera ditore: **shpërblimi ditor** 🎁 me seri (10–30 🪙)
-i kthen lojtarët çdo ditë, dhe niveli i lënë përgjysmë **ruhet e
-vazhdohet** aty ku mbeti.
+### Hapat për t'u paguar (një herë të vetme, ~1 orë punë)
+
+1. **Krijo llogarinë AdMob** — [admob.google.com](https://admob.google.com)
+   me llogarinë Google. Te **Payments** vendos të dhënat bankare dhe ato
+   tatimore; Google paguan çdo muaj kur kalon pragun **100 USD** (me
+   verifikim adrese me PIN postar herën e parë).
+2. **Regjistro aplikacionet** — *Apps → Add app* për iOS dhe Android.
+   Merr **App ID**-të (`ca-app-pub-…~…`) dhe vendosi te `CONFIG.appId`
+   në `www/js/ads.js`, si dhe në projektet native:
+   - iOS `Info.plist`: çelësi `GADApplicationIdentifier`
+   - Android `AndroidManifest.xml`: meta-data
+     `com.google.android.gms.ads.APPLICATION_ID`
+3. **Krijo 6 njësi reklamash** (3 për platformë): *Rewarded*,
+   *Interstitial*, *Banner*. Vendos ID-të te `CONFIG.units` në
+   `www/js/ads.js` — janë të shënuara me `← ZËVENDËSO`.
+4. **Instalo plugin-in** në projektin Capacitor:
+   ```bash
+   npm install @capacitor-community/admob
+   npx cap sync
+   ```
+5. **Pëlqimi (pa këtë s'paguhesh në BE!)** — te AdMob →
+   *Privacy & messaging* aktivizo mesazhin GDPR. Aplikacioni tashmë
+   thërret `requestConsentInfo()`/`showConsentForm()` dhe në iOS kërkon
+   lejen ATT (shto `NSUserTrackingUsageDescription` në `Info.plist`,
+   p.sh. *"Përdoret për reklama më të përshtatshme"*).
+6. **app-ads.txt** — publiko në faqen tënde të internetit skedarin që
+   të jep AdMob (*Apps → View all apps → app-ads.txt*) dhe vendos të
+   njëjtën faqe si "Developer website" në App Store / Play Store.
+   Pa të, shumë rrjete s'të japin reklama të paguara.
+7. **Përpara publikimit**: te `www/js/ads.js` kalo `TEST_MODE = false`.
+   Gjatë zhvillimit lëre `true` (përdor reklamat testuese të Google).
+   ⚠️ **Mos i kliko kurrë vetë reklamat reale** — AdMob e mbyll
+   llogarinë dhe të ardhurat humbasin.
+8. **"Hiq reklamat"** — regjistro produktin jo-konsumues
+   `com.fjaleshqip.game.removeads` në App Store Connect / Play Console
+   dhe lidhe me një plugin blerjesh (p.sh. RevenueCat);
+   `purchaseRemoveAds()`/`restorePurchases()` në `ads.js` i thërrasin
+   automatikisht kur ekzistojnë.
+
+Përfitime të tjera që rrisin të ardhurat: **shpërblimi ditor** 🎁 i
+kthen lojtarët çdo ditë (më shumë sesione = më shumë reklama), dhe
+niveli i lënë përgjysmë **ruhet e vazhdohet** aty ku mbeti.
 
 ## Burimi i fjalëve
 

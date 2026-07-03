@@ -92,6 +92,14 @@
     Object.values(screens).forEach((s) => s.classList.remove("active"));
     screens[name].classList.add("active");
     if (name === "home") refreshHome();
+    // banner-i shfaqet VETËM në hartën e qyteteve, kurrë gjatë lojës
+    if (name === "packs" && !store.premium) {
+      AdManager.showBanner();
+      $("packs-list").classList.add("with-banner");
+    } else {
+      AdManager.hideBanner();
+      $("packs-list").classList.remove("with-banner");
+    }
   }
 
   /* Ekrani kryesor tregon gjithmonë ku ke mbetur. */
@@ -1099,6 +1107,7 @@
       (bonusCount ? ` · ${bonusCount} fjalë bonus ⭐` : "") +
       (isLast ? " — Përfundove gjithë lojën! 🇦🇱" : "");
     $("btn-next").style.display = isLast ? "none" : "";
+    $("btn-double").style.display = ""; // rikthehet për çdo fitore të re
     setTimeout(() => {
       $("overlay-win").classList.add("show");
       // yjet bien njëri pas tjetrit, secili me tingullin e vet
@@ -1114,13 +1123,21 @@
   /* ---------- Reklamat dhe dyqani ---------- */
 
   /* Reklamë e plotë pas çdo AD_EVERY_WINS nivelesh, kurrë para nivelit
-   * AD_MIN_LEVEL dhe kurrë për lojtarët premium. */
+   * AD_MIN_LEVEL, kurrë për premium, dhe kurrë dy herë brenda 90 sek
+   * (politikat e AdMob për frekuencën). */
+  let lastInterstitialAt = 0;
   function afterWinAd(next) {
-    if (store.premium || store.completed < AD_MIN_LEVEL || store.winsSinceAd < AD_EVERY_WINS) {
+    if (
+      store.premium ||
+      store.completed < AD_MIN_LEVEL ||
+      store.winsSinceAd < AD_EVERY_WINS ||
+      Date.now() - lastInterstitialAt < 90000
+    ) {
       next();
       return;
     }
     store.winsSinceAd = 0;
+    lastInterstitialAt = Date.now();
     AdManager.showInterstitial(next);
   }
 
@@ -1139,6 +1156,19 @@
       () => {
         addCoins(AD_REWARD, $("btn-watch-ad"));
         toast(`📺 +${AD_REWARD} 🪙 — faleminderit!`);
+      },
+      () => toast("Reklama s'është gati — provo më vonë")
+    );
+  });
+
+  /* "Dyfisho shpërblimin" në fitore — vendi më fitimprurës i reklamave
+   * me shpërblim në lojërat e fjalëve. */
+  $("btn-double").addEventListener("click", () => {
+    AdManager.showRewarded(
+      () => {
+        $("btn-double").style.display = "none";
+        addCoins(LEVEL_REWARD, $("btn-double"));
+        toast(`📺 Shpërblimi u dyfishua! +${LEVEL_REWARD} 🪙`);
       },
       () => toast("Reklama s'është gati — provo më vonë")
     );
