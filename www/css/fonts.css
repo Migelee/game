@@ -1,0 +1,6 @@
+/* Nunito (SIL OFL) — e ngjitur në aplikacion, pa kërkesa drejt Google Fonts:
+ * punon offline dhe nuk dërgon IP-në e lojtarit askujt (GDPR).
+ * Nënbashkësia "latin" përfshin Ë, ë, Ç, ç. */
+@font-face { font-family: "Nunito"; font-weight: 700; font-style: normal; font-display: swap; src: url("../fonts/nunito-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Nunito"; font-weight: 800; font-style: normal; font-display: swap; src: url("../fonts/nunito-latin-800-normal.woff2") format("woff2"); }
+@font-face { font-family: "Nunito"; font-weight: 900; font-style: normal; font-display: swap; src: url("../fonts/nunito-latin-900-normal.woff2") format("woff2"); }

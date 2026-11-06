@@ -111,8 +111,14 @@
       store.completed > 0 ? `Niveli ${idx + 1} · ${lv.pack.emoji} ${lv.pack.name}` : "";
   }
 
+  // Në telefon: Haptics native (navigator.vibrate nuk ekziston në iOS).
+  // Në shfletues: navigator.vibrate kur ekziston.
   function vibrate(pattern) {
-    if (store.vibration && navigator.vibrate) navigator.vibrate(pattern);
+    if (!store.vibration) return;
+    const kind = Array.isArray(pattern) ? "success"
+      : pattern >= 70 ? "error" : pattern >= 30 ? "medium" : "light";
+    if (Native.haptic(kind)) return;
+    if (navigator.vibrate) navigator.vibrate(pattern);
   }
 
   /* ---------- Tingujt (WebAudio, pa asnjë skedar) ---------- */
@@ -1182,6 +1188,8 @@
       toast("✓ Reklamat u hoqën përgjithmonë!");
     } else if (result === false) {
       toast("Blerja nuk u krye");
+    } else if (result === "unavailable") {
+      toast("Blerja s'është gati tani — provo më vonë", 2400);
     } else {
       toast("Blerjet funksionojnë vetëm në aplikacionin e telefonit 📱", 2400);
     }
@@ -1189,9 +1197,13 @@
 
   /* ---------- Shpërblimi ditor ---------- */
   function checkDailyReward() {
-    const today = new Date().toISOString().slice(0, 10);
+    // data LOKALE e lojtarit (toISOString jep UTC dhe e ndërron ditën në orë të gabuar)
+    const dayKey = (d) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const now = new Date();
+    const today = dayKey(now);
     if (store.lastDaily === today) return;
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const yesterday = dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
     store.dailyStreak = store.lastDaily === yesterday ? store.dailyStreak + 1 : 1;
     store.lastDaily = today;
     const reward = 10 + 5 * Math.min(store.dailyStreak - 1, 4);
@@ -1205,7 +1217,7 @@
   }
 
   /* ---------- Cilësimet ---------- */
-  const VERSION = "1.2.0";
+  const VERSION = APP_CONFIG.version;
 
   function openSettings() {
     $("tgl-sound").checked = store.sound;
@@ -1224,6 +1236,8 @@
       toast("✓ Blerjet u rikthyen — reklamat u hoqën!");
     } else if (r === false) {
       toast("S'u gjet asnjë blerje e mëparshme");
+    } else if (r === "unavailable") {
+      toast("Rikthimi s'është gati tani — provo më vonë", 2200);
     } else {
       toast("Rikthimi funksionon vetëm në aplikacionin e telefonit 📱", 2200);
     }
@@ -1252,9 +1266,15 @@
   });
   $("btn-restore").addEventListener("click", doRestorePurchases);
   $("btn-restore-shop").addEventListener("click", doRestorePurchases);
-  $("btn-privacy").addEventListener("click", () => window.open("privacy.html", "_blank"));
-  $("btn-rate").addEventListener("click", () =>
-    toast("Faleminderit! ⭐ Vlerësimi hapet në App Store / Google Play", 2200));
+  $("btn-privacy").addEventListener("click", () => {
+    // URL-ja publike nëse është vendosur; përndryshe kopja e ngjitur në aplikacion
+    const url = /X{4,}/.test(APP_CONFIG.privacyUrl) ? "privacy.html" : APP_CONFIG.privacyUrl;
+    window.open(url, "_blank");
+  });
+  $("btn-rate").addEventListener("click", async () => {
+    const ok = await Native.requestReview();
+    if (!ok) toast("Vlerësimi hapet në aplikacionin e telefonit ⭐", 2200);
+  });
 
   /* ---------- Lidhjet e butonave ---------- */
   $("btn-play").addEventListener("click", () => startLevel(Math.min(store.completed, LEVELS.length - 1)));
@@ -1312,6 +1332,10 @@
   updateJar();
   refreshHome();
   AdManager.init();
+  // gjendja e vërtetë e blerjes nga dyqani (kap rimbursimet dhe pajisje të reja)
+  AdManager.syncPremium().then((active) => {
+    if (active !== null && active !== store.premium) store.premium = active;
+  });
 
   // ekrani i nisjes zhduket kur gjithçka është gati
   setTimeout(() => {

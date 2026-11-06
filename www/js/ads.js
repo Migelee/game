@@ -1,58 +1,25 @@
 /* =========================================================================
  * AdManager — reklamat dhe blerjet (të ardhurat e lojës)
  *
- * TRE vende reklamash, të balancuara për të ardhura maksimale pa e
- * prishur përvojën:
+ * Vendet e reklamave (balancuar për të ardhura pa prishur përvojën):
+ *  1. REWARDED — lojtari zgjedh vetë: Dyqani (+30) dhe "Dyfisho" në fitore.
+ *  2. INTERSTITIAL — pas çdo 3 fitoresh, jo para nivelit 4, ftohje 90 s
+ *     (rregullohet nga game.js).
+ *  3. BANNER adaptiv — vetëm në hartën e qyteteve.
+ * "Hiq reklamat" (RevenueCat) fik 2 dhe 3; rewarded mbetet gjithmonë.
  *
- *  1. REWARDED (me shpërblim) — eCPM më i lartë; lojtari zgjedh vetë:
- *     • Dyqani: +30 monedha
- *     • Ekrani i fitores: "Dyfisho shpërblimin" (x2 monedhat e nivelit)
- *  2. INTERSTITIAL (e plotë) — pas çdo 3 nivelesh të fituara, kurrë para
- *     nivelit 4, me ftohje minimale 90 sekonda (politikat e AdMob).
- *  3. BANNER (shirit adaptiv) — vetëm në ekranin e hartës së qyteteve,
- *     kurrë gjatë lojës.
- *
- * "Hiq reklamat" (IAP) i fik 2 dhe 3; rewarded mbetet gjithmonë me dëshirë.
- *
- * NË TELEFON: Google AdMob përmes @capacitor-community/admob v6+,
- * me pëlqimin GDPR (UMP) dhe ATT të iOS të trajtuara në init().
- * NË SHFLETUES: reklama të simuluara që sillen njësoj — për zhvillim.
- *
- * ▼▼▼ PARA PUBLIKIMIT: vendos ID-të e TUA nga admob.google.com dhe
- *     kalo TEST_MODE në false. Mos i kliko kurrë vetë reklamat reale!
+ * Të gjitha ID-të vijnë nga APP_CONFIG (js/config.js). Plugin-et thirren
+ * përmes Native.plugin(...) — shih native.js pse. Në shfletues punon një
+ * simulim që sillet njësoj (për zhvillim dhe testim).
  * ========================================================================= */
 
 const AdManager = (function () {
   "use strict";
 
-  /* =====================================================================
-   * KONFIGURIMI — I VETMI VEND QË DUHET PREKUR PARA PUBLIKIMIT
-   * ===================================================================== */
-  const TEST_MODE = true; // ← kaloje në false vetëm me ID-të e tua reale!
+  const CFG = APP_CONFIG;
+  const TEST_MODE = CFG.testMode;
 
-  const CONFIG = {
-    // App ID-të e AdMob (duhen edhe në Info.plist / AndroidManifest.xml)
-    appId: {
-      ios: "ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY",     // ← ZËVENDËSO
-      android: "ca-app-pub-XXXXXXXXXXXXXXXX~ZZZZZZZZZZ", // ← ZËVENDËSO
-    },
-    // Njësitë e reklamave — krijoji te admob.google.com → Apps → Ad units
-    units: {
-      ios: {
-        banner: "ca-app-pub-XXXXXXXXXXXXXXXX/1111111111",       // ← ZËVENDËSO
-        interstitial: "ca-app-pub-XXXXXXXXXXXXXXXX/2222222222", // ← ZËVENDËSO
-        rewarded: "ca-app-pub-XXXXXXXXXXXXXXXX/3333333333",     // ← ZËVENDËSO
-      },
-      android: {
-        banner: "ca-app-pub-XXXXXXXXXXXXXXXX/4444444444",       // ← ZËVENDËSO
-        interstitial: "ca-app-pub-XXXXXXXXXXXXXXXX/5555555555", // ← ZËVENDËSO
-        rewarded: "ca-app-pub-XXXXXXXXXXXXXXXX/6666666666",     // ← ZËVENDËSO
-      },
-    },
-  };
-
-  /* ID-të zyrtare TESTUESE të Google — përdoren sa kohë TEST_MODE=true.
-   * Me këto mund të klikosh lirisht; me ID-të reale KURRË. */
+  /* ID-të zyrtare TESTUESE të Google — përdoren kur testMode=true. */
   const TEST_UNITS = {
     ios: {
       banner: "ca-app-pub-3940256099942544/2934735716",
@@ -69,70 +36,68 @@ const AdManager = (function () {
   const SIM_REWARDED_SECONDS = 5;
   const SIM_INTERSTITIAL_SECONDS = 3;
 
-  /* ===================================================================== */
-
-  function nativeAdMob() {
-    const cap = window.Capacitor;
-    if (cap && cap.isNativePlatform && cap.isNativePlatform() && cap.Plugins && cap.Plugins.AdMob) {
-      return cap.Plugins.AdMob;
-    }
-    return null;
-  }
+  const isPlaceholder = (s) => !s || /X{4,}/.test(s);
+  const admob = () => Native.plugin("AdMob");
+  const purchases = () => Native.plugin("Purchases");
 
   function unitIds() {
-    const cap = window.Capacitor;
-    const p = cap && cap.getPlatform ? cap.getPlatform() : "web";
-    const table = TEST_MODE ? TEST_UNITS : CONFIG.units;
-    return p === "ios" ? table.ios : table.android;
+    const table = TEST_MODE ? TEST_UNITS : CFG.admob.units;
+    return Native.platform() === "ios" ? table.ios : table.android;
   }
 
   let initialized = false;
   let interstitialReady = false;
   let rewardedReady = false;
+  let rcReady = false;
 
-  /* ---------- Nisja: pëlqimi (UMP/GDPR + ATT) dhe parangarkimi ---------- */
+  /* ---------- Nisja: RevenueCat, pëlqimi (ATT + UMP) dhe parangarkimi ---------- */
   async function init() {
-    const admob = nativeAdMob();
-    if (!admob || initialized) return;
+    if (!Native.isNative() || initialized) return;
+    initialized = true; // mos e nis dy herë nëse thirret njëkohësisht
+
+    // 1. Blerjet
+    const rc = purchases();
+    const rcKey = Native.platform() === "ios" ? CFG.revenuecat.apiKey.ios : CFG.revenuecat.apiKey.android;
+    if (rc && !isPlaceholder(rcKey)) {
+      try { await rc.configure({ apiKey: rcKey }); rcReady = true; } catch (e) { rcReady = false; }
+    }
+
+    const ad = admob();
+    if (!ad) return;
     try {
-      // 1. iOS App Tracking Transparency — kërkohet nga Apple
-      if (admob.requestTrackingAuthorization) {
-        try { await admob.requestTrackingAuthorization(); } catch (e) { /* vazhdo */ }
+      // 2. iOS App Tracking Transparency — kërkohet nga Apple
+      if (Native.platform() === "ios") {
+        try { await ad.requestTrackingAuthorization(); } catch (e) { /* vazhdo */ }
       }
-      // 2. Pëlqimi GDPR përmes User Messaging Platform të Google —
-      //    pa këtë NUK paguhesh për përdoruesit e BE-së.
-      //    (Mesazhi konfigurohet te AdMob → Privacy & messaging.)
-      if (admob.requestConsentInfo) {
-        try {
-          const info = await admob.requestConsentInfo({});
-          if (info && info.isConsentFormAvailable && info.status === "REQUIRED" && admob.showConsentForm) {
-            await admob.showConsentForm();
-          }
-        } catch (e) { /* vazhdo me reklama të papersonalizuara */ }
-      }
-      // 3. Nis SDK-në
-      await admob.initialize({ initializeForTesting: TEST_MODE });
-      initialized = true;
-      // 4. Parangarko që reklamat të shfaqen PA vonesë kur duhen
+      // 3. Pëlqimi GDPR (UMP) — pa të NUK paguhesh për përdoruesit e BE-së
+      try {
+        const info = await ad.requestConsentInfo();
+        if (info && info.isConsentFormAvailable && info.status === "REQUIRED") {
+          await ad.showConsentForm();
+        }
+      } catch (e) { /* vazhdo me reklama të papersonalizuara */ }
+      // 4. Nis SDK-në
+      await ad.initialize({ initializeForTesting: TEST_MODE });
+      // 5. Parangarko që reklamat të hapen pa vonesë
       preloadInterstitial();
       preloadRewarded();
-    } catch (e) { /* loja vazhdon pa reklama native */ }
+    } catch (e) { /* loja vazhdon pa reklama */ }
   }
 
   async function preloadInterstitial() {
-    const admob = nativeAdMob();
-    if (!admob || !initialized) return;
+    const ad = admob();
+    if (!ad) return;
     try {
-      await admob.prepareInterstitial({ adId: unitIds().interstitial });
+      await ad.prepareInterstitial({ adId: unitIds().interstitial, isTesting: TEST_MODE });
       interstitialReady = true;
     } catch (e) { interstitialReady = false; }
   }
 
   async function preloadRewarded() {
-    const admob = nativeAdMob();
-    if (!admob || !initialized) return;
+    const ad = admob();
+    if (!ad) return;
     try {
-      await admob.prepareRewardVideoAd({ adId: unitIds().rewarded });
+      await ad.prepareRewardVideoAd({ adId: unitIds().rewarded, isTesting: TEST_MODE });
       rewardedReady = true;
     } catch (e) { rewardedReady = false; }
   }
@@ -147,14 +112,12 @@ const AdManager = (function () {
 
   function showSimulated(kind, seconds, onFinish) {
     const overlay = document.getElementById("overlay-ad");
-    const titleEl = document.getElementById("ad-title");
-    const bodyEl = document.getElementById("ad-body");
     const countEl = document.getElementById("ad-count");
     const closeBtn = document.getElementById("btn-ad-close");
     const slide = HOUSE_SLIDES[Math.floor(Math.random() * HOUSE_SLIDES.length)];
 
-    titleEl.textContent = slide[0];
-    bodyEl.textContent = slide[1];
+    document.getElementById("ad-title").textContent = slide[0];
+    document.getElementById("ad-body").textContent = slide[1];
     overlay.classList.add("show");
     closeBtn.disabled = true;
     closeBtn.textContent = "…";
@@ -179,27 +142,26 @@ const AdManager = (function () {
     };
   }
 
-  /* ---------- REWARDED: thirr onReward() VETËM po u pa deri në fund ---------- */
+  /* ---------- REWARDED: onReward() vetëm po u pa deri në fund ---------- */
   async function showRewarded(onReward, onUnavailable) {
-    const admob = nativeAdMob();
-    if (admob) {
-      if (!initialized) await init();
+    const ad = admob();
+    if (ad) {
       if (!rewardedReady) {
-        preloadRewarded(); // bëje gati për herën tjetër
+        preloadRewarded();
         if (onUnavailable) onUnavailable();
         return;
       }
       try {
         let gotReward = false;
-        const rewardL = await admob.addListener("onRewardedVideoAdReward", () => { gotReward = true; });
-        const dismissL = await admob.addListener("onRewardedVideoAdDismissed", () => {
+        const rewardL = await ad.addListener("onRewardedVideoAdReward", () => { gotReward = true; });
+        const dismissL = await ad.addListener("onRewardedVideoAdDismissed", () => {
           rewardL.remove();
           dismissL.remove();
           rewardedReady = false;
           preloadRewarded();
           if (gotReward) onReward();
         });
-        await admob.showRewardVideoAd();
+        await ad.showRewardVideoAd();
       } catch (e) {
         rewardedReady = false;
         preloadRewarded();
@@ -207,27 +169,27 @@ const AdManager = (function () {
       }
       return;
     }
+    if (Native.isNative()) { if (onUnavailable) onUnavailable(); return; }
     showSimulated("rewarded", SIM_REWARDED_SECONDS, onReward);
   }
 
-  /* ---------- INTERSTITIAL: thirr onDone() kur mbyllet ---------- */
+  /* ---------- INTERSTITIAL: onDone() kur mbyllet ---------- */
   async function showInterstitial(onDone) {
-    const admob = nativeAdMob();
-    if (admob) {
-      if (!initialized) await init();
+    const ad = admob();
+    if (ad) {
       if (!interstitialReady) {
         preloadInterstitial();
         onDone(); // mos e blloko lojtarin duke pritur reklamën
         return;
       }
       try {
-        const dismissL = await admob.addListener("interstitialAdDismissed", () => {
+        const dismissL = await ad.addListener("interstitialAdDismissed", () => {
           dismissL.remove();
           interstitialReady = false;
           preloadInterstitial();
           onDone();
         });
-        await admob.showInterstitial();
+        await ad.showInterstitial();
       } catch (e) {
         interstitialReady = false;
         preloadInterstitial();
@@ -235,6 +197,7 @@ const AdManager = (function () {
       }
       return;
     }
+    if (Native.isNative()) { onDone(); return; }
     showSimulated("interstitial", SIM_INTERSTITIAL_SECONDS, onDone);
   }
 
@@ -242,11 +205,10 @@ const AdManager = (function () {
   let bannerVisible = false;
 
   async function showBanner() {
-    const admob = nativeAdMob();
-    if (admob) {
-      if (!initialized) await init();
+    const ad = admob();
+    if (ad) {
       try {
-        await admob.showBanner({
+        await ad.showBanner({
           adId: unitIds().banner,
           adSize: "ADAPTIVE_BANNER",
           position: "BOTTOM_CENTER",
@@ -257,7 +219,7 @@ const AdManager = (function () {
       } catch (e) { /* pa banner */ }
       return;
     }
-    // simulim në shfletues
+    if (Native.isNative()) return;
     let el = document.getElementById("sim-banner");
     if (!el) {
       el = document.createElement("div");
@@ -274,52 +236,73 @@ const AdManager = (function () {
   async function hideBanner() {
     if (!bannerVisible) return;
     bannerVisible = false;
-    const admob = nativeAdMob();
-    if (admob) {
-      try { await admob.hideBanner(); } catch (e) { /* s'prish punë */ }
+    const ad = admob();
+    if (ad) {
+      try { await ad.hideBanner(); } catch (e) { /* s'prish punë */ }
       return;
     }
     const el = document.getElementById("sim-banner");
     if (el) el.style.display = "none";
   }
 
-  /* ---------- Blerjet ---------- */
+  /* ---------- Blerjet (RevenueCat) ----------
+   * Kthen: true = blerë, false = anuluar/dështoi, null = s'ka dyqan
+   * (shfletues), "unavailable" = aplikacion native por dyqani s'është
+   * konfiguruar ende (API key / offering). */
+  const hasEntitlement = (info) =>
+    !!(info && info.entitlements && info.entitlements.active && info.entitlements.active[CFG.revenuecat.entitlement]);
+
   async function purchaseRemoveAds() {
-    const cap = window.Capacitor;
-    const purchases = cap && cap.Plugins && (cap.Plugins.Purchases || cap.Plugins.InAppPurchase);
-    if (purchases && purchases.purchaseProduct) {
-      try {
-        await purchases.purchaseProduct({ productIdentifier: "com.fjaleshqip.game.removeads" });
-        hideBanner();
-        return true;
-      } catch (e) {
-        return false;
-      }
+    if (!Native.isNative()) return null;
+    if (!rcReady) { await init(); }
+    const rc = purchases();
+    if (!rc || !rcReady) return "unavailable";
+    try {
+      const offerings = await rc.getOfferings();
+      const pkg = offerings.current && offerings.current.availablePackages && offerings.current.availablePackages[0];
+      if (!pkg) return "unavailable";
+      const res = await rc.purchasePackage({ aPackage: pkg });
+      const ok = hasEntitlement(res.customerInfo);
+      if (ok) hideBanner();
+      return ok;
+    } catch (e) {
+      return false; // përfshirë anulimin nga përdoruesi
     }
-    return null; // s'ka dyqan (shfletues)
   }
 
   async function restorePurchases() {
-    const cap = window.Capacitor;
-    const purchases = cap && cap.Plugins && (cap.Plugins.Purchases || cap.Plugins.InAppPurchase);
-    if (purchases && purchases.restorePurchases) {
-      try {
-        const res = await purchases.restorePurchases();
-        const items = (res && (res.purchases || res.transactions)) || [];
-        const has = items.some((p) =>
-          (p.productIdentifier || p.productId) === "com.fjaleshqip.game.removeads");
-        if (has) hideBanner();
-        return has;
-      } catch (e) {
-        return false;
-      }
+    if (!Native.isNative()) return null;
+    if (!rcReady) { await init(); }
+    const rc = purchases();
+    if (!rc || !rcReady) return "unavailable";
+    try {
+      const res = await rc.restorePurchases();
+      const ok = hasEntitlement(res.customerInfo);
+      if (ok) hideBanner();
+      return ok;
+    } catch (e) {
+      return false;
     }
-    return null;
+  }
+
+  /** Gjendja e vërtetë e premium nga dyqani (kap edhe rimbursimet).
+   *  true/false nëse dihet, null nëse s'mund të pyetet. */
+  async function syncPremium() {
+    if (!Native.isNative()) return null;
+    if (!rcReady) { await init(); }
+    const rc = purchases();
+    if (!rc || !rcReady) return null;
+    try {
+      const res = await rc.getCustomerInfo();
+      return hasEntitlement(res.customerInfo);
+    } catch (e) {
+      return null;
+    }
   }
 
   return {
     init, showRewarded, showInterstitial, showBanner, hideBanner,
-    purchaseRemoveAds, restorePurchases,
+    purchaseRemoveAds, restorePurchases, syncPremium,
   };
 })();
 

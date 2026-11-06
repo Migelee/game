@@ -1,10 +1,16 @@
-/* Service worker — punon edhe pa internet (cache-first),
- * me ruajtje dinamike të fonteve të Google. */
-const CACHE = "fjale-shqip-v4";
+/* Service worker — punon edhe pa internet (cache-first).
+ * Gjithçka (përfshirë fontet) është e ngjitur në aplikacion, pa CDN. */
+const CACHE = "fjale-shqip-v5";
 const ASSETS = [
   "index.html",
   "privacy.html",
+  "css/fonts.css",
   "css/style.css",
+  "fonts/nunito-latin-700-normal.woff2",
+  "fonts/nunito-latin-800-normal.woff2",
+  "fonts/nunito-latin-900-normal.woff2",
+  "js/config.js",
+  "js/native.js",
   "js/levels.js",
   "js/levels-gen.js",
   "js/crossword.js",
@@ -29,22 +35,7 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
-  const url = e.request.url;
-
-  // fontet e Google: ruaji në cache kur vijnë, që të punojnë offline
-  if (url.includes("fonts.googleapis.com") || url.includes("fonts.gstatic.com")) {
-    e.respondWith(
-      caches.open(CACHE).then(async (c) => {
-        const hit = await c.match(e.request);
-        const net = fetch(e.request)
-          .then((res) => { c.put(e.request, res.clone()); return res; })
-          .catch(() => hit);
-        return hit || net;
-      })
-    );
-    return;
-  }
-
+  if (e.request.method !== "GET") return;
   e.respondWith(
     caches.match(e.request).then((hit) => hit || fetch(e.request))
   );
