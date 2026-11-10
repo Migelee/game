@@ -5,6 +5,14 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* Zonat e sigurta: env() është 0 në Android WebView < 140; Capacitor 8
+ * (SystemBars, insetsHandling "css") jep vlerat reale te --safe-area-inset-*.
+ * Marrim më të madhen e të dyjave: punon në iOS, Android i ri dhe i vjetër. */
+:root {
+  --sat: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --sab: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+}
+
 :root {
   --red: #c8102e;
   --red-dark: #8f1119;
@@ -104,8 +112,8 @@ html, body {
   background:
     radial-gradient(ellipse at 50% -10%, rgba(232, 182, 76, 0.16), transparent 55%),
     linear-gradient(170deg, var(--red-dark) 0%, var(--red-deep) 62%, #33050b 100%);
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-top: var(--sat);
+  padding-bottom: var(--sab);
   z-index: 2;
 }
 .screen.active {
@@ -148,6 +156,10 @@ html, body {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  /* text-shadow ndriçon ATRAVERS mbushjes transparente dhe e bën ngjyrën tym;
+     drop-shadow bie jashtë shkronjave */
+  text-shadow: none;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35));
 }
 .tagline { opacity: 0.85; font-size: 15px; margin-bottom: 16px; }
 .home-progress { font-size: 13px; color: var(--gold-light); opacity: 0.85; font-weight: 700; }
@@ -413,7 +425,7 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-bottom: max(14px, env(safe-area-inset-bottom));
+  padding-bottom: max(14px, var(--sab));
 }
 .current-word {
   min-height: 42px;
@@ -816,7 +828,7 @@ html, body {
 /* ---------- Cilësimet ---------- */
 .home-gear {
   position: absolute;
-  top: max(14px, env(safe-area-inset-top));
+  top: max(14px, var(--sat));
   right: 14px;
   z-index: 4;
 }
@@ -876,6 +888,19 @@ html, body {
   cursor: pointer;
 }
 
+/* Radha e dritareve: me z-index të barabartë fiton ajo që vjen më vonë në HTML,
+ * ndaj e përcaktojmë qartë — dritaret që hapen NGA një tjetër duhet të jenë sipër. */
+#overlay-win { z-index: 50; }
+#overlay-shop, #overlay-settings, #overlay-daily { z-index: 52; }
+#overlay-gloss { z-index: 58; }   /* hapet nga fitorja dhe nga rrjeta */
+#overlay-privacy { z-index: 60; } /* hapet nga cilësimet */
+#overlay-ad { z-index: 80; }      /* reklama mbulon gjithçka */
+
+/* ---------- Politika e privatësisë ---------- */
+.privacy-card { max-width: 460px; height: min(82vh, 640px); padding: 14px; gap: 10px; }
+.privacy-card iframe { flex: 1; width: 100%; border: 0; border-radius: 14px; background: #1c0509; min-height: 0; }
+#gloss-text.missing { opacity: 0.7; font-style: italic; }
+
 /* ---------- Dyqani dhe reklamat ---------- */
 .coin-chip { cursor: pointer; font-family: inherit; }
 .shop-item {
@@ -923,7 +948,7 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+  padding: 12px 14px calc(12px + var(--sab));
   background: #17171a;
   border-top: 1px solid rgba(255,255,255,0.15);
   color: var(--paper);
@@ -980,3 +1005,10 @@ html, body {
   .current-word { min-height: 34px; }
   .title { font-size: 44px; }
 }
+
+/* ---------- Versioni 1: pa reklama, pa blerje ---------- */
+.no-ads #btn-double, .no-ads #btn-watch-ad { display: none !important; }
+.no-purchases #btn-remove-ads, .no-purchases #btn-restore,
+.no-purchases #btn-restore-shop { display: none !important; }
+.no-shop .shop-open .plus { display: none; }
+.shop-open:disabled { opacity: 1; cursor: default; }

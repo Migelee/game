@@ -17,6 +17,7 @@ const AdManager = (function () {
   "use strict";
 
   const CFG = APP_CONFIG;
+  const FEATURES = CFG.features;
   const TEST_MODE = CFG.testMode;
 
   /* ID-të zyrtare TESTUESE të Google — përdoren kur testMode=true. */
@@ -45,24 +46,30 @@ const AdManager = (function () {
     return Native.platform() === "ios" ? table.ios : table.android;
   }
 
-  let initialized = false;
+  let initPromise = null;
   let interstitialReady = false;
   let rewardedReady = false;
   let rcReady = false;
 
   /* ---------- Nisja: RevenueCat, pëlqimi (ATT + UMP) dhe parangarkimi ---------- */
-  async function init() {
-    if (!Native.isNative() || initialized) return;
-    initialized = true; // mos e nis dy herë nëse thirret njëkohësisht
+  // Një premtim i vetëm i përbashkët: kushdo që thërret init() (nisja, blerja,
+  // reklama) PRET të njëjtën nisje në vend që të kalojë para se të mbarojë —
+  // përndryshe RevenueCat s'është ende gati dhe sinkronizimi dështon heshtur.
+  function init() {
+    if (!Native.isNative() || (!FEATURES.ads && !FEATURES.purchases)) return Promise.resolve();
+    if (!initPromise) initPromise = doInit();
+    return initPromise;
+  }
 
+  async function doInit() {
     // 1. Blerjet
     const rc = purchases();
     const rcKey = Native.platform() === "ios" ? CFG.revenuecat.apiKey.ios : CFG.revenuecat.apiKey.android;
-    if (rc && !isPlaceholder(rcKey)) {
+    if (FEATURES.purchases && rc && !isPlaceholder(rcKey)) {
       try { await rc.configure({ apiKey: rcKey }); rcReady = true; } catch (e) { rcReady = false; }
     }
 
-    const ad = admob();
+    const ad = FEATURES.ads ? admob() : null;
     if (!ad) return;
     try {
       // 2. iOS App Tracking Transparency — kërkohet nga Apple
@@ -106,7 +113,7 @@ const AdManager = (function () {
   const HOUSE_SLIDES = [
     ["SHQIPONJA", "Zogu madhështor i maleve tona — simboli i flamurit."],
     ["BESA", "Fjala e dhënë që s'thyhet kurrë — krenaria shqiptare."],
-    ["MËSO SHQIP", "Çdo nivel të mëson fjalë të reja nga fjalori."],
+    ["MËSO SHQIP", "Çdo nivel të mëson fjalë të reja shqipe."],
     ["ATDHEU", "Nga Vermoshi në Konispol — luaj nëpër gjithë Shqipërinë."],
   ];
 
@@ -144,8 +151,10 @@ const AdManager = (function () {
 
   /* ---------- REWARDED: onReward() vetëm po u pa deri në fund ---------- */
   async function showRewarded(onReward, onUnavailable) {
+    if (!FEATURES.ads) { if (onUnavailable) onUnavailable(); return; }
     const ad = admob();
     if (ad) {
+      await init();
       if (!rewardedReady) {
         preloadRewarded();
         if (onUnavailable) onUnavailable();
@@ -175,8 +184,10 @@ const AdManager = (function () {
 
   /* ---------- INTERSTITIAL: onDone() kur mbyllet ---------- */
   async function showInterstitial(onDone) {
+    if (!FEATURES.ads) { onDone(); return; }
     const ad = admob();
     if (ad) {
+      await init();
       if (!interstitialReady) {
         preloadInterstitial();
         onDone(); // mos e blloko lojtarin duke pritur reklamën
@@ -201,12 +212,19 @@ const AdManager = (function () {
     showSimulated("interstitial", SIM_INTERSTITIAL_SECONDS, onDone);
   }
 
-  /* ---------- BANNER: vetëm në ekranin e hartës ---------- */
-  let bannerVisible = false;
+  /* ---------- BANNER: vetëm në ekranin e hartës ----------
+   * bannerWanted ndjek QËLLIMIN: nëse lojtari del nga harta para se banner-i
+   * të jetë ngarkuar, ai fshihet sapo të shfaqet (pa u ngecur në ekrane të tjera). */
+  let bannerWanted = false;
+  let bannerShown = false;
 
   async function showBanner() {
+    if (!FEATURES.ads) return;
+    bannerWanted = true;
     const ad = admob();
     if (ad) {
+      await init();
+      if (!bannerWanted || bannerShown) return;
       try {
         await ad.showBanner({
           adId: unitIds().banner,
@@ -215,7 +233,8 @@ const AdManager = (function () {
           margin: 0,
           isTesting: TEST_MODE,
         });
-        bannerVisible = true;
+        bannerShown = true;
+        if (!bannerWanted) hideBanner(); // lojtari iku ndërkohë
       } catch (e) { /* pa banner */ }
       return;
     }
@@ -230,12 +249,13 @@ const AdManager = (function () {
       document.body.appendChild(el);
     }
     el.style.display = "flex";
-    bannerVisible = true;
+    bannerShown = true;
   }
 
   async function hideBanner() {
-    if (!bannerVisible) return;
-    bannerVisible = false;
+    bannerWanted = false;
+    if (!bannerShown) return;
+    bannerShown = false;
     const ad = admob();
     if (ad) {
       try { await ad.hideBanner(); } catch (e) { /* s'prish punë */ }
@@ -253,8 +273,8 @@ const AdManager = (function () {
     !!(info && info.entitlements && info.entitlements.active && info.entitlements.active[CFG.revenuecat.entitlement]);
 
   async function purchaseRemoveAds() {
-    if (!Native.isNative()) return null;
-    if (!rcReady) { await init(); }
+    if (!FEATURES.purchases || !Native.isNative()) return null;
+    await init();
     const rc = purchases();
     if (!rc || !rcReady) return "unavailable";
     try {
@@ -271,8 +291,8 @@ const AdManager = (function () {
   }
 
   async function restorePurchases() {
-    if (!Native.isNative()) return null;
-    if (!rcReady) { await init(); }
+    if (!FEATURES.purchases || !Native.isNative()) return null;
+    await init();
     const rc = purchases();
     if (!rc || !rcReady) return "unavailable";
     try {
@@ -288,8 +308,8 @@ const AdManager = (function () {
   /** Gjendja e vërtetë e premium nga dyqani (kap edhe rimbursimet).
    *  true/false nëse dihet, null nëse s'mund të pyetet. */
   async function syncPremium() {
-    if (!Native.isNative()) return null;
-    if (!rcReady) { await init(); }
+    if (!FEATURES.purchases || !Native.isNative()) return null;
+    await init();
     const rc = purchases();
     if (!rc || !rcReady) return null;
     try {

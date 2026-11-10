@@ -1,9 +1,10 @@
 /* =========================================================================
  * FJALË SHQIP — Të dhënat e niveleve
  *
- * Të gjitha fjalët janë fjalë të gjuhës shqipe, të verifikuara sipas
- * "Fjalorit të Gjuhës së Sotme Shqipe" (FGJSSH) — burim: fjalorishqip.com
- * dhe fjalori.shkenca.org.
+ * STATUSI I VERIFIKIMIT: kjo listë fjalësh u përpilua nga një asistent AI
+ * nga njohuritë e tij të gjuhës dhe NUK është verifikuar ende me fjalor.
+ * Shih tools/lexicon-review.md. Mos e quaj "të verifikuar" para se ta kontrollojë
+ * një folës shqip ose fjalori (vegla: tools/verify-lexicon.js).
  *
  * Struktura: çdo nivel ka një bashkësi shkronjash (rrota) dhe fjalët
  * kryesore që vendosen në rrjetën e fjalëkryqit. Fjalë të tjera të
@@ -168,7 +169,7 @@ const PACKS = [
   },
 ];
 
-/* Fjalë shtesë të vlefshme shqipe (sipas FGJSSH) që japin monedha bonus
+/* Fjalë shtesë shqipe (të paverifikuara ende me fjalor) që japin monedha bonus
  * kur formohen nga shkronjat e rrotës, por nuk janë pjesë e rrjetës. */
 const BONUS_WORDS = new Set([
   "AR", "RA", "HA", "KA", "AH", "AT", "ATË", "TA", "TË", "NA", "NË",
@@ -188,7 +189,8 @@ const BONUS_WORDS = new Set([
   "KOS", "HALL", "ATDHE", "DHEU", "TEH", "DASH", "UDHA", "KOHA",
 ]);
 
-/* Shpjegime të shkurtra sipas Fjalorit të Gjuhës së Sotme Shqipe. */
+/* Shpjegime të shkurtra — shkruar nga asistenti AI, të paverifikuara ende me fjalor.
+ * Fjalët pa shpjegim këtu shfaqin "Shpjegimi nuk është shtuar ende" në lojë. */
 const GLOSSES = {
   DET:    "Hapësirë e madhe me ujë të kripur.",
   TE:     "Parafjalë: pranë, tek dikush a diçka.",

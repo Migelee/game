@@ -15,6 +15,7 @@
   /* ---------- Nivelet e sheshuara ---------- */
   // paketat e punuara me dorë + mijëra paketa të gjeneruara nga leksiku
   const ALL_PACKS = PACKS.concat(typeof GENERATED_PACKS !== "undefined" ? GENERATED_PACKS : []);
+  const FEATURES = APP_CONFIG.features;
   const EXTRA_LEXICON = new Set(typeof LEXICON_WORDS !== "undefined" ? LEXICON_WORDS : []);
   const LEVELS = [];
   ALL_PACKS.forEach((pack, pi) => {
@@ -93,7 +94,7 @@
     screens[name].classList.add("active");
     if (name === "home") refreshHome();
     // banner-i shfaqet VETËM në hartën e qyteteve, kurrë gjatë lojës
-    if (name === "packs" && !store.premium) {
+    if (name === "packs" && FEATURES.ads && !store.premium) {
       AdManager.showBanner();
       $("packs-list").classList.add("with-banner");
     } else {
@@ -616,10 +617,11 @@
   }
 
   function showGloss(word) {
+    // pa shpjegim: thuaj qartë, mos bëj heshtje (prekja s'duhet të duket e prishur)
     const gloss = GLOSSES[word];
-    if (!gloss) return;
     $("gloss-word").textContent = word;
-    $("gloss-text").textContent = gloss;
+    $("gloss-text").textContent = gloss || "Shpjegimi i kësaj fjale nuk është shtuar ende.";
+    $("gloss-text").classList.toggle("missing", !gloss);
     $("overlay-gloss").classList.add("show");
   }
 
@@ -639,6 +641,12 @@
     const letters = current.letters;
     const R = wheelEl.clientWidth / 2;
     const r = R - 38;
+    // Zona e goditjes gjatë zvarritjes duhet të jetë më e vogël se largesa e një
+    // shkronje të ndërmjetme nga kordi që lidh dy shkronja jo-fqinje, përndryshe
+    // vija e drejtë i "kap" shkronjat në mes (me 7 shkronja ~half e fjalëve
+    // s'futeshin dot). Kordi kalon në r·(1−cos(2π/n)) nga shkronja e ndërmjetme.
+    const gap = r * (1 - Math.cos((2 * Math.PI) / Math.max(3, letters.length)));
+    current.hitStrict = Math.max(14, Math.min(30, 0.72 * gap));
     current.wheelNodes = letters.map((ch, i) => {
       const angle = -Math.PI / 2 + (2 * Math.PI * i) / letters.length;
       const x = R + r * Math.cos(angle);
@@ -692,8 +700,11 @@
     return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
   }
 
-  function hitNode(pt) {
-    const hitR = 33;
+  // strict=true gjatë zvarritjes (shih renderWheel); në prekjen e parë/ prekje
+  // të thjeshtë mjafton rrezja e shkronjës së dukshme (s'ka paqartësi kordi).
+  function hitNode(pt, strict) {
+    const first = current.wheelNodes[0];
+    const hitR = strict ? current.hitStrict : (first ? first.el.offsetWidth / 2 : 28);
     let best = -1;
     let bestD = hitR;
     current.wheelNodes.forEach((n, i) => {
@@ -756,7 +767,7 @@
     dragging = true;
     wheelEl.setPointerCapture(ev.pointerId);
     const pt = wheelPoint(ev);
-    const i = hitNode(pt);
+    const i = hitNode(pt, false);
     downInfo = { pt, moved: false, hit: i, wasSelected: i >= 0 && selection.includes(i) };
     if (i >= 0 && !downInfo.wasSelected) selectNode(i);
     drawLines(pt);
@@ -769,7 +780,7 @@
     if (downInfo && Math.hypot(pt.x - downInfo.pt.x, pt.y - downInfo.pt.y) > 14) {
       downInfo.moved = true;
     }
-    const i = hitNode(pt);
+    const i = hitNode(pt, true);
     if (i >= 0) selectNode(i);
     drawLines(pt);
   });
@@ -1113,7 +1124,7 @@
       (bonusCount ? ` · ${bonusCount} fjalë bonus ⭐` : "") +
       (isLast ? " — Përfundove gjithë lojën! 🇦🇱" : "");
     $("btn-next").style.display = isLast ? "none" : "";
-    $("btn-double").style.display = ""; // rikthehet për çdo fitore të re
+    $("btn-double").style.display = FEATURES.ads ? "" : "none"; // rikthehet për çdo fitore të re (vetëm me reklama)
     setTimeout(() => {
       $("overlay-win").classList.add("show");
       // yjet bien njëri pas tjetrit, secili me tingullin e vet
@@ -1134,6 +1145,7 @@
   let lastInterstitialAt = 0;
   function afterWinAd(next) {
     if (
+      !FEATURES.ads ||
       store.premium ||
       store.completed < AD_MIN_LEVEL ||
       store.winsSinceAd < AD_EVERY_WINS ||
@@ -1148,6 +1160,7 @@
   }
 
   function openShop() {
+    if (!FEATURES.ads && !FEATURES.purchases) return; // v1: s'ka dyqan
     const isPremium = store.premium;
     $("btn-remove-ads").style.display = isPremium ? "none" : "";
     $("premium-note").style.display = isPremium ? "" : "none";
@@ -1225,7 +1238,7 @@
     $("tgl-vibration").checked = store.vibration;
     $("btn-restart-level").style.display =
       current && screens.game.classList.contains("active") && !current.won ? "" : "none";
-    $("version-note").textContent = `Fjalë Shqip v${VERSION} · Fjalët sipas Fjalorit të Gjuhës Shqipe`;
+    $("version-note").textContent = `Fjalë Shqip v${VERSION}`;
     $("overlay-settings").classList.add("show");
   }
 
@@ -1266,15 +1279,36 @@
   });
   $("btn-restore").addEventListener("click", doRestorePurchases);
   $("btn-restore-shop").addEventListener("click", doRestorePurchases);
+  // Politika hapet në një dritare brenda aplikacionit, nga kopja e ngjitur (offline).
+  // window.open mund ta zëvendësonte gjithë WebView-n pa rrugë kthimi.
   $("btn-privacy").addEventListener("click", () => {
-    // URL-ja publike nëse është vendosur; përndryshe kopja e ngjitur në aplikacion
-    const url = /X{4,}/.test(APP_CONFIG.privacyUrl) ? "privacy.html" : APP_CONFIG.privacyUrl;
-    window.open(url, "_blank");
+    $("privacy-frame").src = "privacy.html";
+    $("overlay-privacy").classList.add("show");
   });
+  $("btn-privacy-close").addEventListener("click", () => $("overlay-privacy").classList.remove("show"));
   $("btn-rate").addEventListener("click", async () => {
     const ok = await Native.requestReview();
     if (!ok) toast("Vlerësimi hapet në aplikacionin e telefonit ⭐", 2200);
   });
+
+  /* ---------- Butoni "mbrapa" (Android) ----------
+   * Pa këtë, mbrapa del nga aplikacioni në mes të nivelit. Kthen një
+   * tekst që tregon çfarë ndodhi (përdoret nga testet). */
+  function handleBack() {
+    const shown = (id) => $(id).classList.contains("show");
+    if (shown("overlay-ad")) return "ignored:ad";          // reklama s'kapërcehet
+    if (shown("overlay-daily")) return "ignored:daily";    // shpërblimi merret me buton
+    for (const id of ["overlay-privacy", "overlay-gloss", "overlay-settings", "overlay-shop"]) {
+      if (shown(id)) { $(id).classList.remove("show"); return "closed:" + id; }
+    }
+    if (shown("overlay-win")) { $("btn-win-menu").click(); return "win->packs"; }
+    if (screens.game.classList.contains("active")) { $("btn-game-back").click(); return "game->packs"; }
+    if (screens.packs.classList.contains("active")) { showScreen("home"); return "packs->home"; }
+    Native.exitApp();
+    return "exit";
+  }
+  Native.onBackButton(handleBack);
+  window.FjaleShqip = { handleBack }; // për testet
 
   /* ---------- Lidhjet e butonave ---------- */
   $("btn-play").addEventListener("click", () => startLevel(Math.min(store.completed, LEVELS.length - 1)));
@@ -1328,6 +1362,15 @@
     }
   });
 
+  // klasat që fshehin sipërfaqet e reklamave/blerjeve kur janë të çaktivizuara (v1)
+  document.body.classList.toggle("no-ads", !FEATURES.ads);
+  document.body.classList.toggle("no-purchases", !FEATURES.purchases);
+  document.body.classList.toggle("no-shop", !FEATURES.ads && !FEATURES.purchases);
+  if (!FEATURES.ads && !FEATURES.purchases) {
+    // monedhat bëhen thjesht numërues: asnjë buton që s'bën gjë
+    document.querySelectorAll(".shop-open").forEach((el) => { el.disabled = true; });
+  }
+
   updateCoins();
   updateJar();
   refreshHome();
@@ -1345,7 +1388,16 @@
     checkDailyReward();
   }, 1100);
 
-  if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+  // Service worker vetëm për PWA në shfletues. Në aplikacionin native skedarët
+  // janë të ngjitur, dhe cache-first me emër fiks do t'i shërbente lojtarit
+  // skedarë të vjetër pas çdo përditësimi — prandaj e çregjistrojmë dhe e pastrojmë.
+  if ("serviceWorker" in navigator) {
+    if (Native.isNative()) {
+      navigator.serviceWorker.getRegistrations()
+        .then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
+      if (window.caches) caches.keys().then((ks) => ks.forEach((k) => caches.delete(k))).catch(() => {});
+    } else if (location.protocol !== "file:") {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    }
   }
 })();

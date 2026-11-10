@@ -1,13 +1,13 @@
 /* =========================================================================
  * Leksiku i gjuhës shqipe për gjeneratorin e niveleve.
  *
- * Çdo fjalë këtu është fjalë standarde e shqipes, e verifikuar sipas
- * "Fjalorit të Gjuhës së Sotme Shqipe" (FGJSSH) — burim: fjalorishqip.com
- * dhe fjalori.shkenca.org. Përfshihen trajta të shquara e të pashquara
- * emrash, folje në vetën e parë, përemra, ndajfolje e numërorë.
+ * STATUSI I VERIFIKIMIT: kjo listë fjalësh u përpilua nga një asistent AI
+ * nga njohuritë e tij të gjuhës dhe NUK është verifikuar ende me fjalor.
+ * Shih tools/lexicon-review.md. Mos e quaj "të verifikuar" para se ta kontrollojë
+ * një folës shqip ose fjalori (vegla: tools/verify-lexicon.js).
  *
- * KUJDES: shto vetëm fjalë që i ke verifikuar në fjalor — cilësia e
- * mijëra niveleve varet nga cilësia e këtij leksiku.
+ * Përfshihen trajta të shquara e të pashquara emrash, folje në vetën e parë,
+ * përemra, ndajfolje e numërorë. Shto fjalë vetëm pasi t'i kontrollosh.
  * ========================================================================= */
 
 const LEXICON = [

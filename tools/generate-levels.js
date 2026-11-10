@@ -245,7 +245,7 @@ const out =
   " * NIVELE TË GJENERUARA — prodhuar nga tools/generate-levels.js\n" +
   " * MOS e edito me dorë; ndrysho leksikun a gjeneratorin dhe rigjenero:\n" +
   " *   node tools/generate-levels.js\n" +
-  " * Fjalët burojnë nga tools/lexicon.js (verifikuar sipas FGJSSH).\n" +
+  " * Fjalët burojnë nga tools/lexicon.js (PA verifikuar ende me fjalor — shih tools/lexicon-review.md).\n" +
   " * ========================================================================= */\n\n" +
   "const GENERATED_PACKS = " + JSON.stringify(packs) + ";\n\n" +
   "/* Leksiku i plotë — çdo fjalë e vlefshme shqipe jep monedha bonus. */\n" +

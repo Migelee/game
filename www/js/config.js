@@ -15,7 +15,14 @@ const APP_CONFIG = {
   testMode: true,
 
   bundleId: "com.fjaleshqip.game", // duhet të përputhet me capacitor.config.json
-  version: "1.2.0",
+  version: "1.0.0",
+
+  // VERSIONI 1 del dhe PA reklama dhe PA blerje; ato vijnë në një përditësim.
+  // Me false: UI e dyqanit fshihet, asnjë plugin reklamash/blerjesh nuk
+  // thirret, configure-native nuk shton çelësat e AdMob/ATT, dhe politika e
+  // privatësisë duhet të jetë ajo pa reklama (testet e detyrojnë këtë).
+  // Aktivizimi: shih README → "Aktivizimi i reklamave dhe blerjeve".
+  features: { ads: false, purchases: false },
 
   admob: {
     appId: {
@@ -44,9 +51,11 @@ const APP_CONFIG = {
     entitlement: "remove_ads",
   },
 
-  // URL publik i politikës së privatësisë (GitHub Pages mjafton).
-  // Shkruaje edhe në App Store Connect / Play Console.
-  privacyUrl: "https://XXXX.example.com/privacy.html",
+  // URL publik i politikës së privatësisë — për listimet e dyqaneve.
+  // Fillon të funksionojë kur aktivizon GitHub Pages (shih
+  // .github/workflows/privacy-pages.yml) dhe bashkon në main. Brenda
+  // aplikacionit politika hapet gjithmonë nga kopja e ngjitur (offline).
+  privacyUrl: "https://migelee.github.io/game/privacy.html",
 };
 
 if (typeof module !== "undefined") {

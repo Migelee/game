@@ -1,0 +1,32 @@
+# Publikon VETËM politikën e privatësisë (jo gjithë lojën) në GitHub Pages,
+# që dyqanet të kenë një URL publike. Aktivizo një herë:
+#   Settings → Pages → Build and deployment → Source: "GitHub Actions"
+# URL-ja: https://<perdoruesi>.github.io/<repo>/privacy.html
+name: Publish privacy policy
+on:
+  push:
+    branches: [main]
+    paths: ["www/privacy.html", ".github/workflows/privacy-pages.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: mkdir site && cp www/privacy.html site/privacy.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

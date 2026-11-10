@@ -53,7 +53,6 @@
       <button id="btn-play" class="btn btn-primary">LUAJ</button>
       <div id="home-progress" class="home-progress"></div>
       <button id="btn-packs" class="btn btn-ghost">🗺️ Qytetet</button>
-      <p class="source-note">Fjalët sipas Fjalorit të Gjuhës Shqipe</p>
     </div>
     <svg class="mountains" viewBox="0 0 400 90" preserveAspectRatio="none" aria-hidden="true">
       <path d="M0 90 L0 55 L45 20 L85 52 L130 8 L185 58 L230 25 L280 60 L330 15 L400 62 L400 90 Z" fill="rgba(0,0,0,0.35)"/>
@@ -66,7 +65,7 @@
     <header class="topbar">
       <button class="icon-btn" id="btn-packs-back" aria-label="Kthehu">‹</button>
       <h2>Qytetet</h2>
-      <button class="coin-chip shop-open">🪙 <span id="coins-packs">0</span> ＋</button>
+      <button class="coin-chip shop-open">🪙 <span id="coins-packs">0</span><span class="plus"> ＋</span></button>
     </header>
     <div id="packs-list" class="packs-list"></div>
   </div>
@@ -81,7 +80,7 @@
       </div>
       <button class="icon-btn small" id="btn-settings" aria-label="Cilësimet">⚙️</button>
       <div class="jar-chip" id="jar-chip" title="Kavanozi i yjeve: mblidh 10 yje bonus për +40 monedha">⭐ <span id="jar-count">0</span>/10</div>
-      <button class="coin-chip shop-open">🪙 <span id="coins-game">0</span> ＋</button>
+      <button class="coin-chip shop-open">🪙 <span id="coins-game">0</span><span class="plus"> ＋</span></button>
     </header>
     <div class="level-progress"><b id="level-progress-fill"></b></div>
 
@@ -133,7 +132,6 @@
     <div class="overlay-card">
       <h2 id="gloss-word"></h2>
       <p id="gloss-text"></p>
-      <p class="source-note">— Fjalori i Gjuhës Shqipe</p>
       <button id="btn-gloss-close" class="btn btn-primary">Mbylle</button>
     </div>
   </div>
@@ -176,6 +174,14 @@
       <h2>Shpërblimi ditor</h2>
       <p id="daily-text"></p>
       <button id="btn-daily-claim" class="btn btn-primary">Merre!</button>
+    </div>
+  </div>
+
+  <!-- Politika e privatësisë (hapet brenda aplikacionit; kurrë nuk e largon lojtarin) -->
+  <div id="overlay-privacy" class="overlay">
+    <div class="overlay-card privacy-card">
+      <iframe id="privacy-frame" title="Politika e privatësisë"></iframe>
+      <button id="btn-privacy-close" class="btn btn-primary">Mbylle</button>
     </div>
   </div>
 

@@ -1,27 +1,34 @@
 {
   "name": "fjale-shqip",
-  "version": "1.2.0",
+  "version": "1.0.0",
   "description": "Fjalë Shqip — lojë fjalëkryqi me fjalë shqipe (si Words of Wonders), me temë Shqipërinë.",
   "private": true,
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "npx serve www",
     "validate": "node tools/validate.js",
     "generate": "node tools/generate-levels.js",
-    "audit": "node .claude/skills/game-reviewer/scripts/audit.js",
-    "assets": "node tools/make-assets.js && npx capacitor-assets generate",
+    "audit": "node tools/audit.js",
+    "assets": "node tools/make-assets.js && npx capacitor-assets generate --ios --android",
     "ios:add": "npx cap add ios && node tools/configure-native.js",
     "ios:sync": "npx cap sync ios && node tools/configure-native.js",
     "ios:open": "npx cap open ios",
     "android:add": "npx cap add android && node tools/configure-native.js",
-    "android:sync": "npx cap sync android && node tools/configure-native.js"
+    "android:sync": "npx cap sync android && node tools/configure-native.js",
+    "audit:release": "node tools/audit.js --release",
+    "analyze": "node tools/analyze-levels.js",
+    "verify:lexicon": "NODE_USE_ENV_PROXY=1 node tools/verify-lexicon.js",
+    "test": "node --test \"tests/*.test.js\"",
+    "test:browser": "node --test --test-concurrency=1 \"tests/browser/*.test.js\"",
+    "test:all": "npm run validate && npm test && npm run test:browser"
   },
   "dependencies": {
-    "@capacitor/core": "^8.6.0",
-    "@capacitor/haptics": "^8.0.2",
-    "@capacitor-community/admob": "^8.3.0",
     "@capacitor-community/in-app-review": "^8.0.0",
-    "@revenuecat/purchases-capacitor": "^14.1.0"
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/haptics": "^8.0.2"
   },
   "devDependencies": {
     "@capacitor/android": "^8.6.0",

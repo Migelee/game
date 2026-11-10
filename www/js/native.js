@@ -5,7 +5,7 @@
  * nuk ekziston (ekziston vetëm pasi JS i plugin-it të ketë thirrur
  * registerPlugin). Këtu e thërrasim vetë `Capacitor.registerPlugin(emri)`,
  * që në telefon lidhet drejt kodit native. Emrat janë verifikuar nga
- * paketat: AdMob, Purchases, Haptics, InAppReview.
+ * paketat: AdMob, Purchases, Haptics, InAppReview, App.
  * ========================================================================= */
 
 const Native = (function () {
@@ -54,7 +54,19 @@ const Native = (function () {
     try { await r.requestReview(); return true; } catch (e) { return false; }
   }
 
-  return { isNative, platform, plugin, haptic, requestReview };
+  /** Butoni "mbrapa" i Android: handler() thirret në vend të daljes nga aplikacioni. */
+  function onBackButton(handler) {
+    const app = plugin("App");
+    if (!app) return false;
+    try { app.addListener("backButton", handler); return true; } catch (e) { return false; }
+  }
+
+  function exitApp() {
+    const app = plugin("App");
+    if (app) { try { app.exitApp(); } catch (e) { /* s'prish punë */ } }
+  }
+
+  return { isNative, platform, plugin, haptic, requestReview, onBackButton, exitApp };
 })();
 
 if (typeof module !== "undefined") {
