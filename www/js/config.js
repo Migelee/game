@@ -14,6 +14,11 @@ const APP_CONFIG = {
   // vetëm në ndërtimin e publikimit, me ID-të e tua reale më poshtë.
   testMode: true,
 
+  // Adresa ku dërgohen fjalët e munguara (butoni "Raporto fjalë" hap aplikacionin
+  // e email-it të lojtarit; asgjë nuk dërgohet automatikisht). E njëjtë me
+  // kontaktin te www/privacy.html.
+  supportEmail: "migelebishka05@icloud.com",
+
   bundleId: "com.fjaleshqip.game", // duhet të përputhet me capacitor.config.json
   version: "1.0.0",
 

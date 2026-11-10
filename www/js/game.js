@@ -16,7 +16,10 @@
   // paketat e punuara me dorë + mijëra paketa të gjeneruara nga leksiku
   const ALL_PACKS = PACKS.concat(typeof GENERATED_PACKS !== "undefined" ? GENERATED_PACKS : []);
   const FEATURES = APP_CONFIG.features;
-  const EXTRA_LEXICON = new Set(typeof LEXICON_WORDS !== "undefined" ? LEXICON_WORDS : []);
+  // Fjalët e pranuara = leksiku i kuruar + lista e madhe e burimuar (js/wordlist-sq.js).
+  // Lista e madhe është bosh derisa të gjendet një burim i vërtetë (shih tools/build-wordlist.js).
+  const BIG_LIST = typeof WORDLIST_SQ !== "undefined" && WORDLIST_SQ ? WORDLIST_SQ.split("\n") : [];
+  const EXTRA_LEXICON = new Set([...(typeof LEXICON_WORDS !== "undefined" ? LEXICON_WORDS : []), ...BIG_LIST]);
   const LEVELS = [];
   ALL_PACKS.forEach((pack, pi) => {
     pack.levels.forEach((lv, li) => {
@@ -68,12 +71,20 @@
       if (v) LS.set("fs_resume", JSON.stringify(v));
       else LS.remove("fs_resume");
     },
+    // fjalët që lojtari provoi dhe loja s'i njohu (vetëm në pajisje; dërgohen vetëm nëse
+    // lojtari zgjedh "Raporto fjalë të munguara")
+    get rejected() { try { return JSON.parse(LS.get("fs_rejected", "{}")) || {}; } catch { return {}; } },
+    set rejected(v) { LS.set("fs_rejected", JSON.stringify(v)); },
   };
 
   const COST_HINT = 25;
   const COST_TARGET = 35;
   const COST_BOMB = 60;
   const BONUS_REWARD = 5;
+  // Me një fjalor të madh, një rrotë mund të lejojë qindra fjalë: pa kufi, monedhat
+  // dhe kavanozi do të fryheshin. Fjalët e para BONUS_PAID_CAP paguhen; të tjerat
+  // pranohen (✓) por pa monedha. Me listën aktuale (pak fjalë) kjo s'preket kurrë.
+  const BONUS_PAID_CAP = 10;
   const LEVEL_REWARD = 20;
   const STREAK_REWARD = 3;   // monedha shtesë për çdo gjetje kur seria >= 3
   const JAR_SIZE = 10;
@@ -469,6 +480,7 @@
       letters: level.letters.split(""),
       toolUses: 0,
       wrongGuesses: 0,
+      bonusPaid: 0,
       won: false,
       targetMode: false,
       flying: 0,
@@ -531,6 +543,7 @@
       const cell = current.cellEls.get(k);
       if (cell) cell.classList.add("revealed");
     });
+    current.bonusPaid = Math.min((saved.bonus || []).length, BONUS_PAID_CAP);
     current.toolUses = saved.toolUses || 0;
     current.wrongGuesses = saved.wrongGuesses || 0;
     // rikthe shkëlqimin e Fjalës së Artë nëse ishte gjetur
@@ -844,13 +857,19 @@
         return;
       }
       current.bonusFound.add(word);
-      onCorrectFind();
       Sound.bonus();
       sparksAt(wheelEl, 7, "#ffe9b0");
-      addCoins(BONUS_REWARD, wheelEl);
-      addJarStar(wheelEl);
+      if (current.bonusPaid < BONUS_PAID_CAP) {
+        current.bonusPaid++;
+        onCorrectFind();
+        addCoins(BONUS_REWARD, wheelEl);
+        addJarStar(wheelEl);
+        toast(`✨ Fjalë bonus: ${word} (+${BONUS_REWARD} 🪙)`);
+      } else {
+        // fjalë e vlefshme, por kufiri i monedhave për këtë nivel u arrit
+        toast(`✓ ${word} — fjalë e vlefshme (pa monedha shtesë në këtë nivel)`);
+      }
       saveProgress();
-      toast(`✨ Fjalë bonus: ${word} (+${BONUS_REWARD} 🪙)`);
       return;
     }
 
@@ -864,7 +883,19 @@
     // rrota skuqet për një çast — shkak-pasojë e qartë
     wheelEl.classList.add("wrong");
     setTimeout(() => wheelEl.classList.remove("wrong"), 450);
-    toast("Nuk është fjalë e nivelit");
+    // s'themi "nuk është fjalë shqipe": lista jonë është e kufizuar, dhe fjala mund të jetë e vlefshme
+    recordRejected(word);
+    toast("S'e kemi këtë fjalë në listë (ende)");
+  }
+
+  /* Ruan fjalën e refuzuar (vetëm në pajisje) që lojtari të mund t'i raportojë me email. */
+  function recordRejected(word) {
+    if (word.length < 2) return;
+    const r = store.rejected;
+    r[word] = (r[word] || 0) + 1;
+    const keys = Object.keys(r);
+    for (let i = 0; i < keys.length - 100; i++) delete r[keys[i]]; // më të vjetrat jashtë
+    store.rejected = r;
   }
 
   /* ---------- Këshilla të buta kur lojtari ngec ---------- */
@@ -1239,6 +1270,9 @@
     $("btn-restart-level").style.display =
       current && screens.game.classList.contains("active") && !current.won ? "" : "none";
     $("version-note").textContent = `Fjalë Shqip v${VERSION}`;
+    const nRejected = Object.keys(store.rejected).length;
+    $("btn-report-words").style.display = nRejected ? "" : "none";
+    $("report-count").textContent = nRejected ? `(${nRejected})` : "";
     $("overlay-settings").classList.add("show");
   }
 
@@ -1286,6 +1320,17 @@
     $("overlay-privacy").classList.add("show");
   });
   $("btn-privacy-close").addEventListener("click", () => $("overlay-privacy").classList.remove("show"));
+  // Hap aplikacionin e email-it me fjalët e provuara; asgjë nuk dërgohet automatikisht.
+  $("btn-report-words").addEventListener("click", () => {
+    const words = Object.entries(store.rejected).sort((a, b) => b[1] - a[1]).slice(0, 50).map(([w]) => w);
+    if (!words.length) return;
+    const subject = encodeURIComponent(`Fjalë të munguara — Fjalë Shqip v${VERSION}`);
+    const body = encodeURIComponent(
+      "Këto fjalë i provova në lojë dhe nuk u pranuan:\n\n" + words.join("\n") +
+      "\n\n(Fshiji ato që s'janë fjalë të vlefshme shqipe para se ta dërgosh.)"
+    );
+    Native.openExternal(`mailto:${APP_CONFIG.supportEmail}?subject=${subject}&body=${body}`);
+  });
   $("btn-rate").addEventListener("click", async () => {
     const ok = await Native.requestReview();
     if (!ok) toast("Vlerësimi hapet në aplikacionin e telefonit ⭐", 2200);

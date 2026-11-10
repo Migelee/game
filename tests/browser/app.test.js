@@ -103,6 +103,13 @@ async function open(opts = {}) {
     localStorage.setItem("__seeded", "1");
     for (const [k, v] of Object.entries(s)) localStorage.setItem(k, String(v));
   }, state);
+  // regjistron lidhjet e jashtme (mailto:) në vend që t'i hapë
+  await page.addInitScript(() => { HTMLAnchorElement.prototype.click = function () { (window.__opened = window.__opened || []).push(this.href); }; });
+  if (opts.wordlist) {
+    // lista e madhe e simuluar (VETËM për test: vargje shkronjash arbitrare)
+    await page.route("**/js/wordlist-sq.js", (route) =>
+      route.fulfill({ contentType: "text/javascript", body: `const WORDLIST_SQ = ${JSON.stringify(opts.wordlist.join("\n"))};` }));
+  }
   if (opts.realKeys || opts.features) {
     // rishkruan config.js: çelësa të rremë RevenueCat dhe/ose veçoritë ON (v1 i ka të dyja OFF)
     await page.route("**/js/config.js", async (route) => {
@@ -309,7 +316,7 @@ test("WEB: politika e privatësisë hapet brenda aplikacionit, pa e larguar loj�
     await p.click("#btn-privacy"); await p.waitForTimeout(500);
     assert.equal(await p.locator("#overlay-privacy.show").count(), 1);
     const frame = p.frameLocator("#privacy-frame");
-    assert.match(await frame.locator("body").textContent(), V1 ? /nuk mbledh asnjë të dhënë/ : /AdMob/); // politika duhet të përputhet me veçoritë
+    assert.match(await frame.locator("body").textContent(), V1 ? /nuk mbledh automatikisht asnjë të dhënë/ : /AdMob/); // politika duhet të përputhet me veçoritë
     assert.equal(new URL(p.url()).pathname, "/", "faqja kryesore u largua");
     await p.click("#btn-privacy-close");
     assert.equal(await p.locator("#overlay-privacy.show").count(), 0);
@@ -574,5 +581,82 @@ test("V1 NATIVE: asnjë plugin reklamash/blerjesh nuk kërkohet fare dhe s'ka as
     assert.deepEqual(c.filter((x) => x.p === "AdMob" || x.p === "Purchases"), []);
     assert.equal(c.some((x) => x.m === "requestTrackingAuthorization"), false, "kërkesa ATT pa reklama");
     assert.match(await text(p, "#level-num"), /Niveli 12/);
+  } finally { await close(p); }
+});
+
+/* =========================================================================
+ * 4) FJALË TË REFUZUARA, RAPORTIMI DHE LISTA E MADHE
+ * ========================================================================= */
+test("FJALË: fjala e panjohur thotë të vërtetën, ruhet vetëm në pajisje dhe raportohet me email (pa dërgim automatik)", async () => {
+  const p = await open();
+  try {
+    await play(p);
+    await spell(p, "ED", 300);
+    assert.match(await text(p, "#toast"), /S'e kemi këtë fjalë në listë/);
+    assert.doesNotMatch(await text(p, "#toast"), /nuk është fjalë shqipe/i, "loja s'duhet të pretendojë se fjala është e pavlefshme");
+    await spell(p, "ED", 300);
+    assert.deepEqual(await p.evaluate(() => JSON.parse(localStorage.getItem("fs_rejected"))), { ED: 2 });
+    // raporti shfaqet vetëm kur ka fjalë
+    await p.click("#btn-settings");
+    assert.equal(await p.locator("#btn-report-words").isVisible(), true);
+    assert.match(await text(p, "#report-count"), /\(1\)/);
+    await p.click("#btn-report-words");
+    const opened = await p.evaluate(() => window.__opened);
+    assert.equal(opened.length, 1);
+    assert.match(opened[0], /^mailto:migelebishka05@icloud\.com\?/);
+    assert.match(decodeURIComponent(opened[0]), /ED/);
+    // asgjë s'dërgohet vetvetiu: vetëm një hapje lidhjeje të nisur nga lojtari, pa kërkesa rrjeti
+    assert.deepEqual(p.external, []);
+    // kalon edhe rifreskimin
+    await p.reload(); await p.waitForSelector("#splash", { state: "detached" });
+    assert.deepEqual(await p.evaluate(() => JSON.parse(localStorage.getItem("fs_rejected"))), { ED: 2 });
+  } finally { await close(p); }
+});
+
+test("FJALË: pa fjalë të refuzuara s'ka rresht raportimi; lista ruan më së shumti 100 fjalë", async () => {
+  const p = await open();
+  try {
+    await p.click("#btn-settings-home");
+    assert.equal(await p.locator("#btn-report-words").isVisible(), false);
+    await p.click("#btn-settings-close");
+    await p.evaluate(() => localStorage.setItem("fs_rejected", JSON.stringify(Object.fromEntries(Array.from({ length: 100 }, (_, i) => ["W" + i, 1])))));
+    await p.reload(); await p.waitForSelector("#splash", { state: "detached" });
+    await play(p);
+    await spell(p, "ED", 300); // fjala e 101-të
+    const r = await p.evaluate(() => JSON.parse(localStorage.getItem("fs_rejected")));
+    assert.equal(Object.keys(r).length, 100);
+    assert.ok(r.ED === 1 && !("W0" in r), "më e vjetra duhet hequr");
+  } finally { await close(p); }
+});
+
+test("FJALË: me listë të madhe pranohen më shumë fjalë, por vetëm 10 paguhen për nivel (pa fryrje të monedhave)", async () => {
+  // gjej një nivel me rrotë 5-shkronjëshe dhe ndërto fjalë të panjohura prej shkronjave të tij (VETËM për test)
+  const probe = await open();
+  const lv = await probe.evaluate(() => {
+    let i = 0; for (const pk of PACKS.concat(GENERATED_PACKS)) for (const l of pk.levels) { if (l.letters.length === 5 && i > 200) return { idx: i, letters: l.letters, words: l.words }; i++; }
+  });
+  await close(probe);
+  const perm = (arr, n) => n === 0 ? [[]] : arr.flatMap((x, i) => perm([...arr.slice(0, i), ...arr.slice(i + 1)], n - 1).map((r) => [x, ...r]));
+  const fake = [...new Set(perm([...lv.letters], 3).map((a) => a.join("")))].filter((w) => !lv.words.includes(w));
+  assert.ok(fake.length >= 12, "s'ka mjaft fjalë testuese për këtë rrotë");
+  const extra = fake.slice(0, 12);
+  const p = await open({ state: { fs_completed: lv.idx }, wordlist: extra });
+  try {
+    await play(p);
+    const deltas = [];
+    for (const w of extra) {
+      const c0 = await coins(p), j0 = await text(p, "#jar-count");
+      await spell(p, w, 1700); // pret edhe +40 e kavanozit (ylli fluturon ~0.7s) para matjes tjetër
+      deltas.push({ coins: (await coins(p)) - c0, jarMoved: (await text(p, "#jar-count")) !== j0, toast: await text(p, "#toast") });
+    }
+    // 10 të parat japin monedha; 11-ta dhe 12-ta pranohen (✓) por pa monedha, pa yll
+    assert.ok(deltas.slice(0, 10).every((d) => d.coins >= 5), "10 të parat duhet të paguhen: " + JSON.stringify(deltas.map((d) => d.coins)));
+    for (const d of deltas.slice(10)) {
+      assert.equal(d.coins, 0, "fjala mbi kufi dha monedha");
+      assert.match(d.toast, /pa monedha shtesë/);
+    }
+    // s'ka asnjë refuzim: të gjitha u pranuan
+    assert.equal(await p.evaluate(() => localStorage.getItem("fs_rejected")), null);
+    assert.deepEqual(p.errors, []);
   } finally { await close(p); }
 });

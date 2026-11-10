@@ -75,6 +75,19 @@ if (badClaim.length) add("block", `pretendim i paverifikuar për fjalorin te: ${
 else add("ok", "asnjë pretendim 'verifikuar sipas fjalorit' i paverifikuar");
 add("warn", "leksiku dhe shpjegimet NUK janë verifikuar me fjalor (shih tools/lexicon-review.md)");
 
+// ---- lista e madhe e fjalëve të pranuara
+const wl = read("www/js/wordlist-sq.js");
+const wlHead = (k) => (wl.match(new RegExp(`\\* ${k}: (.*)`)) || [])[1] || "";
+const wlCount = parseInt(wlHead("count"), 10) || 0;
+if (wlCount === 0) {
+  add("warn", "lista e madhe e fjalëve është BOSH — pranohen vetëm fjalët e leksikut (~365); lojtarët do të provojnë fjalë të vlefshme që nuk njihen. Shih tools/build-wordlist.js");
+} else {
+  add("ok", `lista e madhe: ${wlCount} fjalë, burimi: ${wlHead("source")}, licenca: ${wlHead("license")}`);
+  if (/^unreviewed/i.test(wlHead("review")) || !wlHead("review") || /asnjë/.test(wlHead("review"))) {
+    add(releaseOnly, "lista e madhe NUK është rishikuar nga një folës shqip (review: " + (wlHead("review") || "—") + ") — rishiko tools/wordlist-review-sample.md");
+  } else add("ok", `lista e madhe e rishikuar: ${wlHead("review")}`);
+}
+
 // ---- aseti
 for (const f of ["assets/icon.png", "assets/splash.png"]) {
   if (exists(f)) add("ok", `${f} ekziston`); else add(releaseOnly, `${f} mungon — ekzekuto npm run assets`);

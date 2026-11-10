@@ -64,6 +64,11 @@ info.push(`fjalët më të përdorura pa shpjegim (shtoji të parat, nga fjalori
 // pranimi i fjalëve
 const accepted = new Set([...LEXICON, ...BONUS_WORDS]);
 info.push(`fjalë të pranuara gjithsej: ${accepted.size}. Fjalorët e vërtetë kanë dhjetëra mijëra — lojtarët do të provojnë fjalë të vlefshme që loja s'i njeh; kjo është kufizimi më i madh i cilësisë gjuhësore.`);
+try {
+  const code = require("fs").readFileSync(path.join(ROOT, "www/js/wordlist-sq.js"), "utf8");
+  const h = (k) => (code.match(new RegExp(`\\* ${k}: (.*)`)) || [])[1] || "—";
+  info.push(`lista e madhe (www/js/wordlist-sq.js): ${h("count")} fjalë · burimi: ${h("source")} · licenca: ${h("license")} · rishikimi: ${h("review")}`);
+} catch (e) { info.push("lista e madhe: s'u lexua (" + e.message + ")"); }
 const bonusOutside = [...BONUS_WORDS].filter((w) => !lexSet.has(w));
 info.push(`fjalë bonus jashtë leksikut (nga lista e dorës, të paverifikuara): ${bonusOutside.length}`);
 // përdorim: fjalët që shfaqen në shumë nivele peshojnë më shumë te cilësia

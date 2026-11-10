@@ -149,6 +149,15 @@ niveli i lënë përgjysmë **ruhet e vazhdohet** aty ku mbeti.
 
 ## Burimi i fjalëve
 
+### Fjalët e pranuara — kufizimi më i madh
+Loja pranon vetëm ~365 fjalë, prandaj shumë fjalë të vlefshme shqipe refuzohen (në gjysmën e niveleve
+s'ka asnjë fjalë shtesë që mund të gjendet). Mekanizmi për një listë të madhe është gati, por **lista
+s'ka burim ende**: `www/js/wordlist-sq.js` është bosh. Hapat: gjej një burim të vërtetë me licencë të
+përshtatshme → `npm run wordlist -- --input <skedar> --source "..." --license "..."` → një folës shqip
+rishikon mostrën te `tools/wordlist-review-sample.md` (gabime > 2% = mos e dërgo) → `audit:release`.
+Ndërkohë, lojtarët mund të raportojnë fjalë të munguara nga Cilësimet (hapet email-i i tyre; asgjë
+s'dërgohet vetvetiu). Fjalët mbi 10 për nivel pranohen por pa monedha shtesë.
+
 **Statusi:** fjalët dhe shpjegimet u përpiluan nga një asistent AI nga njohuritë e tij të gjuhës shqipe. **Nuk janë verifikuar ende me fjalor.** Para publikimit duhet t'i kontrollojë një folës shqip ose një fjalor i besueshëm (p.sh. fjalorishqip.com, fjalori.shkenca.org). Lista e fjalëve që duhen parë së pari është te `tools/lexicon-review.md`; vegla `tools/verify-lexicon.js` ndihmon me kontrollin kur ka qasje në internet.
 
 Lista e niveleve gjendet te `www/js/levels.js`; fjalët pa shpjegim shfaqin në lojë "Shpjegimi i kësaj fjale nuk është shtuar ende".
@@ -188,8 +197,8 @@ Në `.claude/skills/` ka pesë skills që Claude Code i përdor automatikisht ku
 ## Testet
 
 ```bash
-npm test               # të dhëna, vegla, konfigurim native, privatësi, plugin-e (21 teste)
-npm run test:browser   # shfletues i vërtetë me Playwright: lojë, reklama, blerje, back, v1 (24 teste)
+npm test               # të dhëna, vegla, konfigurim native, privatësi, plugin-e (24 teste)
+npm run test:browser   # shfletues i vërtetë me Playwright: lojë, reklama, blerje, back, v1, fjalët e refuzuara (27 teste)
 npm run validate       # të 2 389 nivelet
 npm run audit          # gatishmëria për publikim; `audit:release` bllokon vendmbajtëset
 npm run analyze        # kurba e vështirësisë dhe rrotat e përsëritura

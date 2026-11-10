@@ -66,7 +66,19 @@ const Native = (function () {
     if (app) { try { app.exitApp(); } catch (e) { /* s'prish punë */ } }
   }
 
-  return { isNative, platform, plugin, haptic, requestReview, onBackButton, exitApp };
+  /** Hap një lidhje të jashtme (mailto:, https:) pa window.open, që s'mund ta
+   *  zëvendësojë WebView-n. Përmes një <a> që sistemi e trajton. */
+  function openExternal(url) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  return { isNative, platform, plugin, haptic, requestReview, onBackButton, exitApp, openExternal };
 })();
 
 if (typeof module !== "undefined") {

@@ -22,7 +22,8 @@
     "verify:lexicon": "NODE_USE_ENV_PROXY=1 node tools/verify-lexicon.js",
     "test": "node --test \"tests/*.test.js\"",
     "test:browser": "node --test --test-concurrency=1 \"tests/browser/*.test.js\"",
-    "test:all": "npm run validate && npm test && npm run test:browser"
+    "test:all": "npm run validate && npm test && npm run test:browser",
+    "wordlist": "node tools/build-wordlist.js"
   },
   "dependencies": {
     "@capacitor-community/in-app-review": "^8.0.0",

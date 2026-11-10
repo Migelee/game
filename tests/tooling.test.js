@@ -165,7 +165,8 @@ test("politika e privatësisë përputhet me veçoritë (reklama/blerje) dhe sha
   const tpl = read("docs/privacy-with-ads.html");
   assert.match(tpl, /AdMob/); assert.match(tpl, /RevenueCat/);
   if (!APP_CONFIG.features.ads && !APP_CONFIG.features.purchases) {
-    assert.match(p, /nuk mbledh asnjë të dhënë/);
+    assert.match(p, /nuk mbledh automatikisht asnjë të dhënë/);
+  for (const f of ["www/privacy.html", "docs/privacy-with-ads.html"]) assert.match(read(f), /Raporto fjalë të munguara/, f + " nuk përshkruan raportimin e fjalëve");
   }
 });
 
@@ -201,5 +202,58 @@ test("service worker: çdo skedar i listuar ekziston", () => {
   const sw = read("www/sw.js");
   for (const m of sw.matchAll(/^\s+"([^"]+\.\w+)",?$/gm)) {
     assert.ok(fs.existsSync(path.join(ROOT, "www", m[1])), `sw.js liston ${m[1]} që s'ekziston`);
+  }
+});
+
+/* ---------- lista e madhe e fjalëve (build-wordlist) ---------- */
+const bw = require("../tools/build-wordlist.js");
+const { execFileSync, spawnSync } = require("node:child_process");
+const os = require("node:os");
+
+test("build-wordlist: mban vetëm fjalë të thjeshta shqipe; heq emra, shifra, hapësira, W, përsëritje, dublime", () => {
+  const lines = fs.readFileSync(path.join(__dirname, "fixtures/raw-words.txt"), "utf8").split("\n");
+  const { words, stats } = bw.filterWords(lines, { min: 2, max: 9 });
+  assert.deepEqual(new Set(words), new Set(["MAL", "DET", "ZEMRA", "ÇELËS", "GJUHA", "SHQIP"]));
+  assert.equal(stats.capitalized, 1, "Tirana duhet hequr si emër i përveçëm");
+  assert.equal(stats.duplicate, 1, "MAL i dytë = dublim, jo emër (gjithë shkronja të mëdha)");
+  assert.ok(stats.chars >= 4 && stats.repeated === 1 && stats.length >= 2);
+  assert.deepEqual(words, words.slice().sort((a, b) => a.length - b.length || a.localeCompare(b, "sq")), "radhitje e qëndrueshme");
+});
+
+test("build-wordlist CLI: pa --source ose --license ndalet; me ta shkruan skedar me proveniencë, i përsëritshëm, me mostër", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wl-"));
+  const tool = path.join(ROOT, "tools/build-wordlist.js");
+  const input = path.join(__dirname, "fixtures/raw-words.txt");
+  const run = (...extra) => spawnSync("node", [tool, "--input", input, "--out", path.join(dir, "w.js"), "--samplefile", path.join(dir, "s.md"), "--sample", "4", ...extra], { encoding: "utf8" });
+  assert.equal(run("--license", "CC BY-SA 4.0").status, 1, "pa --source");
+  assert.equal(run("--source", "Burim test").status, 1, "pa --license");
+  const ok = run("--source", "Burim test", "--license", "CC BY-SA 4.0");
+  assert.equal(ok.status, 0, ok.stderr);
+  const code = fs.readFileSync(path.join(dir, "w.js"), "utf8");
+  assert.match(code, /source: Burim test/); assert.match(code, /license: CC BY-SA 4\.0/);
+  assert.match(code, /review: unreviewed/); assert.match(code, /count: 6/);
+  const list = new Function(code + "; return WORDLIST_SQ;")().split("\n");
+  assert.equal(list.length, 6);
+  const sample = fs.readFileSync(path.join(dir, "s.md"), "utf8");
+  assert.equal((sample.match(/^\| [^|]+ \|  \|$/gm) || []).length, 4, "mostra duhet 4 rreshta");
+  const first = fs.readFileSync(path.join(dir, "w.js"), "utf8").replace(/generated: .*/, "");
+  run("--source", "Burim test", "--license", "CC BY-SA 4.0");
+  assert.equal(fs.readFileSync(path.join(dir, "w.js"), "utf8").replace(/generated: .*/, ""), first, "dy ekzekutime japin rezultate të ndryshme");
+  fs.rmSync(dir, { recursive: true });
+});
+
+test("lista e dërguar (wordlist-sq.js): numri i saktë; nëse ka fjalë, ka burim+licencë; alfabeti, gjatësia, radhitja", () => {
+  const code = read("www/js/wordlist-sq.js");
+  const head = (k) => (code.match(new RegExp(`\\* ${k}: (.*)`)) || [])[1];
+  const list = new Function(code + "; return WORDLIST_SQ;")();
+  const words = list ? list.split("\n") : [];
+  assert.equal(parseInt(head("count"), 10), words.length, "count në titull ≠ fjalët reale");
+  if (words.length) {
+    assert.ok(head("source") && !/asnjë/.test(head("source")), "lista ka fjalë por s'ka burim");
+    assert.ok(head("license") && !/asnjë/.test(head("license")), "lista ka fjalë por s'ka licencë");
+    assert.equal(new Set(words).size, words.length, "dublime");
+    for (const w of words) { assert.match(w, bw.ALPHABET, w); assert.ok(w.length >= 2 && w.length <= 9, w); }
+  } else {
+    assert.match(head("source"), /asnjë/, "lista e zbrazët duhet ta thotë haptazi");
   }
 });

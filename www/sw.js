@@ -13,6 +13,7 @@ const ASSETS = [
   "js/native.js",
   "js/levels.js",
   "js/levels-gen.js",
+  "js/wordlist-sq.js",
   "js/crossword.js",
   "js/ads.js",
   "js/game.js",
